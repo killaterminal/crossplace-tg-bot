@@ -2,8 +2,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const TelegramBot = require('node-telegram-bot-api');
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
+
+const bot = new TelegramBot(token, { polling: true });
 
 const app = express();
 const port = 3020;
@@ -35,6 +38,23 @@ app.get('/securityItems', async (req, res) => {
     }
 });
 
+app.post('/data', (req, res) => {
+    const data = req.body;
+
+    const message = Получены новые данные от сайта: ${JSON.stringify(data)};
+    bot.sendMessage(CHAT_ID, message);
+
+    res.status(200).send('Данные получены');
+});
+
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, 'Бот готов принимать данные от сайта');
+});
+
+
 app.listen(port, () => {
     console.log(`Сервер запущено на порті ${port}`);
 });
+
+
