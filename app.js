@@ -41,7 +41,7 @@ app.get('/securityItems', async (req, res) => {
 app.post('/data', (req, res) => {
     const data = req.body;
 
-    const message = Получены новые данные от сайта: ${JSON.stringify(data)};
+    const message = `Получены новые данные от сайта: ${JSON.stringify(data)}`;
     bot.sendMessage(CHAT_ID, message);
 
     res.status(200).send('Данные получены');
