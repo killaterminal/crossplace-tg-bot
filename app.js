@@ -205,6 +205,7 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
 });
 
 
+
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
