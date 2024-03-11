@@ -207,7 +207,25 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
       console.error('Помилка при отриманні інформації про товар:', error);
     }
   }
-  bot.sendMessage(chatId, cartContent !== '' ? cartContent : 'Ваш кошик порожній.');
+
+  try {
+    const userId = msg.from.id;
+    const existingClient = await Clients.findOneAndUpdate(
+      { userId: userId },
+      { $push: { orders: cartContent } },
+      { new: true }
+    );
+
+    if (existingClient) {
+      bot.sendMessage(chatId, 'Замовлення успішно додано до бази даних.');
+      shoppingCarts[chatId] = []; 
+    } else {
+      bot.sendMessage(chatId, 'Ви не зареєстровані в нашій системі. Будь-ласка, зареєструйтесь.');
+    }
+  } catch (error) {
+    console.error('Помилка при додаванні замовлення в базу даних:', error);
+    bot.sendMessage(chatId, 'Виникла помилка при додаванні замовлення в базу даних. Спробуйте ще раз пізніше.');
+  }
 });
 
 
