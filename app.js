@@ -84,7 +84,7 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `Замовити ${object.name}`, callback_data: `security_object_${object._id}` }]
               ]
             }
           };
@@ -108,7 +108,7 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `Замовити ${object.name}`, callback_data: `security_object_${object._id}` }]
               ]
             }
           };
