@@ -56,7 +56,7 @@ bot.onText(/\/start/, (msg) => {
 });
 
 
-bot.on('callback_query', (query) => {
+bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
@@ -74,8 +74,23 @@ bot.on('callback_query', (query) => {
       }
     });
   }
-  else if(data === 'catalog_security') {
-    bot.sendMessage(chatId, 'Cameras');
+  else if (data === 'catalog_security') {
+    const chatId = query.message.chat.id;
+    try {
+      const securityObjects = await Security.find();
+      if (securityObjects && securityObjects.length > 0) {
+        let response = 'Об\'єкти безпеки:\n';
+        securityObjects.forEach(object => {
+          response += `Назва: ${object.name}\nКатегорія: ${object.category}\nЦіна: ${object.price}\nОпис: ${object.description}\n\n`;
+        });
+        bot.sendMessage(chatId, response);
+      } else {
+        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
+      }
+    } catch (error) {
+      console.error('Помилка отримання об\'єктів безпеки:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
+    }
   }
 
 });
