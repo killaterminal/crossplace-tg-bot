@@ -35,6 +35,7 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(chatId, 'Привіт! Натисни кнопку "Зареєструватися", щоб почати процес реєстрації.', opts);
 });
 
+
 bot.on('callback_query', (query) => {
   if (query.data === 'register') {
     const chatId = query.message.chat.id;
