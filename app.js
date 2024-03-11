@@ -108,18 +108,18 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `Об'єкт ${object._id}`, callback_data: `catalog_fences_${object._id}` }]
               ]
             }
           };
           bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
         });
       } else {
-        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
+        bot.sendMessage(chatId, 'На жаль, немає доступних огорож.');
       }
     } catch (error) {
-      console.error('Помилка отримання об\'єктів безпеки:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
+      console.error('Помилка отримання огорож:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож.');
     }
   }
 });
