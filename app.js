@@ -78,16 +78,14 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     try {
       const securityObjects = await Security.find();
-      if(securityObjects && securityObjects.length > 0) {
-        const options = {
-          reply_markup: {
-            inline_keyboard: []
-          }
-        };
-
+      if (securityObjects && securityObjects.length > 0) {
         securityObjects.forEach((object) => {
           const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
-          options.reply_markup.inline_keyboard.push([{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]);
+          const options = {
+            reply_markup: {
+              inline_keyboard: [[{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]]
+            }
+          };
           bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
         });
       } else {
@@ -104,15 +102,15 @@ bot.on('callback_query', async (query) => {
       const fencesObjects = await Fences.find();
       if (fencesObjects && fencesObjects.length > 0) {
         fencesObjects.forEach(async object => {
-          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}\nКрок: ${object.step}`;
+          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
           await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown' });
         });
       } else {
-        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
+        bot.sendMessage(chatId, 'На жаль, немає доступних огороджень.');
       }
     } catch (error) {
-      console.error('Помилка отримання об\'єктів безпеки:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
+      console.error('Помилка отримання огороджень:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні огороджень.');
     }
   }
 
