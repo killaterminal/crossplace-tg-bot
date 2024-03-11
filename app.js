@@ -58,7 +58,7 @@ bot.on('callback_query', (query) => {
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const username = msg.from.username;;
+  const username = msg.from.username;
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
@@ -67,11 +67,11 @@ bot.on('contact', async (msg) => {
     const existingClient = await Clients.findOne({ userId: userId });
 
     if (existingClient) {
-      bot.deleteMessage(chatId, query.message.message_id);
-      bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.',  {
+      bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.', {
         reply_markup: {
           remove_keyboard: true
-        }});
+        }
+      });
       return;
     }
 
