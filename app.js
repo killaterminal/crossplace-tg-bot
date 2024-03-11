@@ -79,17 +79,17 @@ bot.on('callback_query', async (query) => {
     try {
       const securityObjects = await Security.find();
       if (securityObjects && securityObjects.length > 0) {
-        const options = {
-          reply_markup: {
-            inline_keyboard: []
-          }
-        };
         securityObjects.forEach((object) => {
           const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
-          bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown' });
-          options.reply_markup.inline_keyboard.push([{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]);
+          const options = {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]
+              ]
+            }
+          };
+          bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
         });
-        bot.sendMessage(chatId, 'Виберіть об\'єкт для детальнішої інформації:', options);
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
       }
