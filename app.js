@@ -97,6 +97,10 @@ bot.on('contact', async (msg) => {
     });
   } catch (error) {
     console.error('Помилка при збереженні нового клієнта:', error);
-    bot.sendMessage(chatId, 'Виникла помилка при реєстрації. Спробуйте ще раз пізніше.');
+    bot.sendMessage(chatId, 'Виникла помилка при реєстрації. Спробуйте ще раз пізніше.', {
+      reply_markup: {
+        remove_keyboard: true
+      }
+    });
   }
 });
