@@ -138,7 +138,6 @@ bot.on('callback_query', async (query) => {
   }
 
   else if (data === 'order') {
-    const chatId = msg.chat.id;
     if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
       bot.sendMessage(chatId, 'Ваш кошик порожній.');
       return;
