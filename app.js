@@ -18,7 +18,6 @@ const clientSchema = new mongoose.Schema({
   orders: [String]
 });
 
-// Модель пользователя
 const Clients = mongoose.model('clients', clientSchema);
 
 bot.onText(/\/start/, (msg) => {
@@ -62,7 +61,7 @@ bot.on('contact', (msg) => {
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
 
-  const newUser = new User({
+  const newClient = new Clients({
     userId: userId,
     username: username,
     phoneNumber: phoneNumber,
@@ -71,12 +70,12 @@ bot.on('contact', (msg) => {
     orders: []
   });
 
-  newUser.save((err, user) => {
+  newClient.save((err, client) => {
     if (err) {
       console.error(err);
       return;
     }
-    console.log('Новый пользователь сохранен в базе данных:', user);
+    console.log('Новий клієнт збережений в базі даних:', client);
   });
 
   console.log(`UserId: ${userId}\nUsername: ${username}\nName: ${firstName}\nLast name: ${lastName}\nPhone number: ${phoneNumber}`);
