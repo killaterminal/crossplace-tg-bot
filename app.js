@@ -64,20 +64,28 @@ bot.on('contact', async (msg) => {
   const lastName = msg.contact.last_name;
 
   try {
-    const newClient = new Clients({
+    const newClientData = {
       userId: userId,
       username: username || 'не указано',
       phoneNumber: phoneNumber || 'не указано',
       firstName: firstName || 'не указано',
       lastName: lastName || 'не указано',
       orders: []
-    });
+    };
+
+    const newClient = new Clients(newClientData);
 
     await newClient.save();
 
     console.log('Новий клієнт збережений в базі даних:', newClient);
 
-    bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.');
+    bot.deleteMessage(chatId, msg.message_id);
+
+    bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.', {
+      reply_markup: {
+        remove_keyboard: true
+      }
+    });
   } catch (error) {
     console.error('Помилка при збереженні нового клієнта:', error);
     bot.sendMessage(chatId, 'Виникла помилка при реєстрації. Спробуйте ще раз пізніше.');
