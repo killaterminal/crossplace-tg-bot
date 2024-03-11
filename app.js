@@ -64,6 +64,13 @@ bot.on('contact', async (msg) => {
   const lastName = msg.contact.last_name;
 
   try {
+    const existingClient = await Clients.findOne({ userId: userId });
+
+    if (existingClient) {
+      bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.');
+      return;
+    }
+
     const newClientData = {
       userId: userId,
       username: username || 'не указано',
