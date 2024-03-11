@@ -21,7 +21,7 @@ const clientSchema = new mongoose.Schema({
 
 const Clients = mongoose.model('clients', clientSchema);
 
-bot.onText(/\/start/, (msg) => {  
+bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name;
   const opts = {
@@ -42,8 +42,7 @@ bot.on('callback_query', (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
-  switch (data) {
-    case 'register':
+  if(data === 'register'){
       bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
         reply_markup: {
           keyboard: [
@@ -56,24 +55,25 @@ bot.on('callback_query', (query) => {
           one_time_keyboard: true
         }
       });
-      break;
-    case 'catalog':
-      bot.sendMessage(chatId, 'Каталог');
-      break;
-    case 'leave_message':
-      bot.sendMessage(chatId, 'Залишити повідомлення');
-      break;
-    case 'my_orders':
-      bot.sendMessage(chatId, 'Мої замовлення');
-      break;
-    case 'cart':
-      bot.sendMessage(chatId, 'Кошик');
-      break;
-    default:
-      bot.sendMessage(chatId, 'Невідома команда');
-      break;
-  }
+    }
+  
 });
+
+bot.onText(/^(Каталог)$/i, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 'Вибачте, функція "Каталог" ще не реалізована.');
+});
+
+bot.onText(/^(Повідомлення)$/i, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 'Вибачте, функція "Повідомлення" ще не реалізована.');
+});
+
+bot.onText(/^(Замовлення|Кошик)$/i, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
+});
+
 
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
