@@ -38,6 +38,7 @@ const fencesSchema = new mongoose.Schema({
   step: Number
 });
 const Fences = mongoose.model('fences', fencesSchema);
+const shoppingCarts = {};
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -97,6 +98,9 @@ bot.on('callback_query', async (query) => {
       console.error('Помилка отримання об\'єктів безпеки:', error);
       bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
     }
+
+
+
   }
   else if (data === 'catalog_fences') {
     const chatId = query.message.chat.id;
@@ -122,6 +126,35 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож.');
     }
   }
+
+
+  else if (data.startsWith('add_to_cart_')) {
+    const productId = data.split('_')[2];
+    if (!shoppingCarts[chatId]) {
+      shoppingCarts[chatId] = [];
+    }
+    shoppingCarts[chatId].push(productId);
+    bot.sendMessage(chatId, 'Товар додано до кошика.');
+  }
+
+  else if (data === 'order') {
+    if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
+      bot.sendMessage(chatId, 'Кошик порожній.');
+      return;
+    }
+    try {
+      const existingClient = await Clients.findOne({ userId: query.from.id });
+      if (existingClient) {
+        existingClient.orders.push(...shoppingCarts[chatId]);
+        await existingClient.save();
+        bot.sendMessage(chatId, 'Замовлення успішно збережено.');
+      }
+    } catch (error) {
+      console.error('Помилка при збереженні замовлення:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при збереженні замовлення. Спробуйте ще раз пізніше.');
+    }
+    shoppingCarts[chatId] = [];
+  }
 });
 
 bot.onText(/^(Каталог)$/i, (msg) => {
@@ -146,7 +179,7 @@ bot.onText(/^(Мої замовлення)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
 });
-bot.onText(/^(Кошик)$/i, (msg) => {
+bot.onText(/^(Кошик 🛒)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Кошик" ще не реалізована.');
 });
