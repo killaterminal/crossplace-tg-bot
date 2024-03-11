@@ -18,8 +18,26 @@ const clientSchema = new mongoose.Schema({
   lastName: String,
   orders: [String]
 });
-
 const Clients = mongoose.model('clients', clientSchema);
+
+const securitySchema = new mongoose.Schema({
+  name: String,
+  category: String,
+  price: Number,
+  description: String,
+  image: String
+});
+const Security = mongoose.model('security', securitySchema);
+
+const fencesSchema = new mongoose.Schema({
+  name: String,
+  category: String,
+  price: Number,
+  description: String,
+  image: String,
+  step: Number
+});
+const Fences = mongoose.model('fences', fencesSchema);
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -62,6 +80,8 @@ bot.on('callback_query', (query) => {
 bot.onText(/^(Каталог)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Каталог" ще не реалізована.');
+
+
 });
 bot.onText(/^(Залишити повідомлення)$/i, (msg) => {
   const chatId = msg.chat.id;
