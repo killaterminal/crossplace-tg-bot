@@ -90,7 +90,17 @@ bot.on('contact', async (msg) => {
     if (existingClient) {
       bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.', {
         reply_markup: {
-          remove_keyboard: true
+          keyboard: [
+            [
+              { text: 'Каталог', callback_data: 'catalog' },
+              { text: 'Залишити повідомлення', callback_data: 'leave_message' }
+            ],
+            [
+              { text: 'Мої замовлення', callback_data: 'my_orders' },
+              { text: 'Кошик', callback_data: 'cart' }
+            ]
+          ],
+          resize_keyboard: true
         }
       });
       return;
