@@ -185,7 +185,7 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Ваш кошик порожній.');
     return;
   }
-  bot.sendMessage(chatId, `${shoppingCarts} fe`)
+  bot.sendMessage(chatId, `${shoppingCarts} fe`);
   try {
     const userId = query.from.id;
     const existingClient = await Clients.findOne({ userId: userId });
