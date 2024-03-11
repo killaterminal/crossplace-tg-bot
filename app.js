@@ -31,8 +31,7 @@ bot.on('callback_query', (query) => {
             request_contact: true
           }]
         ],
-        resize_keyboard: true,
-        one_time_keyboard: true
+        resize_keyboard: true
       }
     });
   }
@@ -47,5 +46,9 @@ bot.on('contact', (msg) => {
   const lastName = msg.contact.last_name;
 
   console.log(`UserId: ${userId}\nUsername: ${username}\nName: ${firstName}\nLast name: ${lastName}\nPhone number: ${phoneNumber}`);
-  bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.');
+  bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.', {
+    reply_markup: {
+      remove_keyboard: true
+    }
+  });
 });
