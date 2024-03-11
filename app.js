@@ -67,7 +67,11 @@ bot.on('contact', async (msg) => {
     const existingClient = await Clients.findOne({ userId: userId });
 
     if (existingClient) {
-      bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.');
+      bot.deleteMessage(chatId, query.message.message_id);
+      bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.',  {
+        reply_markup: {
+          remove_keyboard: true
+        }});
       return;
     }
 
@@ -85,8 +89,6 @@ bot.on('contact', async (msg) => {
     await newClient.save();
 
     console.log('Новий клієнт збережений в базі даних:', newClient);
-
-    bot.deleteMessage(chatId, msg.message_id);
 
     bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.', {
       reply_markup: {
