@@ -58,7 +58,7 @@ bot.on('callback_query', (query) => {
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const username = msg.contact.username;
+  const username = msg.from.username;;
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
@@ -66,10 +66,10 @@ bot.on('contact', async (msg) => {
   try {
     const newClient = new Clients({
       userId: userId,
-      username: username,
-      phoneNumber: phoneNumber,
-      firstName: firstName,
-      lastName: lastName,
+      username: username || 'не указано',
+      phoneNumber: phoneNumber || 'не указано',
+      firstName: firstName || 'не указано',
+      lastName: lastName || 'не указано',
       orders: []
     });
 
