@@ -38,6 +38,9 @@ bot.onText(/\/start/, (msg) => {
 
 
 bot.on('callback_query', (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+
   if (query.data === 'register') {
     const chatId = query.message.chat.id;
     bot.sendMessage(chatId, 'Будь-ласка, відправ свій контакт, щоб завершити реєстрацію.', {
@@ -52,6 +55,24 @@ bot.on('callback_query', (query) => {
         one_time_keyboard: true
       }
     });
+  }
+
+  switch (data) {
+    case 'catalog':
+      bot.sendMessage(chatId, 'Каталог');
+      break;
+    case 'leave_message':
+      bot.sendMessage(chatId, 'Залишити повідомлення');
+      break;
+    case 'my_orders':
+      bot.sendMessage(chatId, 'Мої замовлення');
+      break;
+    case 'cart':
+      bot.sendMessage(chatId, 'Кошик');
+      break;
+    default:
+      bot.sendMessage(chatId, 'Невідома команда');
+      break;
   }
 });
 
@@ -92,7 +113,17 @@ bot.on('contact', async (msg) => {
 
     bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.', {
       reply_markup: {
-        remove_keyboard: true
+        keyboard: [
+          [
+            { text: 'Каталог', callback_data: 'catalog' },
+            { text: 'Залишити повідомлення', callback_data: 'leave_message' }
+          ],
+          [
+            { text: 'Мої замовлення', callback_data: 'my_orders' },
+            { text: 'Кошик', callback_data: 'cart' }
+          ]
+        ],
+        resize_keyboard: true
       }
     });
   } catch (error) {
