@@ -78,9 +78,33 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     try {
       const securityObjects = await Security.find();
-      if (securityObjects && securityObjects.length > 0) {
-        securityObjects.forEach(async object => {
-          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
+      if(securityObjects && securityObjects.length > 0) {
+        const options = {
+          reply_markup: {
+            inline_keyboard: []
+          }
+        };
+
+        securityObjects.forEach((object) => {
+          const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
+          options.reply_markup.inline_keyboard.push([{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]);
+          bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+        });
+      } else {
+        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
+      }
+    } catch (error) {
+      console.error('Помилка отримання об\'єктів безпеки:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
+    }
+  }
+  else if (data === 'catalog_fences') {
+    const chatId = query.message.chat.id;
+    try {
+      const fencesObjects = await Fences.find();
+      if (fencesObjects && fencesObjects.length > 0) {
+        fencesObjects.forEach(async object => {
+          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}\nКрок: ${object.step}`;
           await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown' });
         });
       } else {
