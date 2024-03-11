@@ -108,7 +108,7 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Об'єкт ${object._id}`, callback_data: `catalog_fences_${object._id}` }]
+                [{ text: `Об'єкт ${object._id}`, callback_data: `fences_object_${object._id}` }]
               ]
             }
           };
