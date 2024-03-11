@@ -32,7 +32,7 @@ bot.on('callback_query', (query) => {
           }]
         ],
         resize_keyboard: true,
-        one_time_keyboard: true 
+        one_time_keyboard: true
       }
     });
   }
