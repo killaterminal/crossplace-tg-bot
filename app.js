@@ -191,23 +191,23 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Ваш кошик порожній.');
     return;
   }
-  bot.sendMessage(chatId, `${shoppingCarts} fe`);
-  try {
-    const userId = query.from.id;
-    const existingClient = await Clients.findOne({ userId: userId });
 
-    if (existingClient) {
-      existingClient.orders.push(...shoppingCarts[chatId]);
-      await existingClient.save();
-      bot.sendMessage(chatId, 'Замовлення успішно збережено.');
-      shoppingCarts[chatId] = [];
-    } else {
-      bot.sendMessage(chatId, 'Ви не зареєстровані в нашій системі. Будь-ласка, зареєструйтесь.');
+  let cartContent = '';
+  for (const productId of shoppingCarts[chatId]) {
+    let product;
+    try {
+      product = await Security.findById(productId);
+      if (!product) {
+        product = await Fences.findById(productId);
+      }
+      if (product) {
+        cartContent += `Назва: ${product.name}\nЦіна: ${product.price} грн\n\n`;
+      }
+    } catch (error) {
+      console.error('Помилка при отриманні інформації про товар:', error);
     }
-  } catch (error) {
-    console.error('Помилка при збереженні замовлення:', error);
-    bot.sendMessage(chatId, 'Виникла помилка при збереженні замовлення. Спробуйте ще раз пізніше.');
   }
+  bot.sendMessage(chatId, cartContent !== '' ? cartContent : 'Ваш кошик порожній.');
 });
 
 
