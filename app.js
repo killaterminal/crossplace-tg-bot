@@ -55,7 +55,7 @@ bot.on('callback_query', (query) => {
   }
 });
 
-bot.on('contact', (msg) => {
+bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const username = msg.contact.username;
@@ -63,23 +63,23 @@ bot.on('contact', (msg) => {
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
 
-  const newClient = new Clients({
-    userId: userId,
-    username: username,
-    phoneNumber: phoneNumber,
-    firstName: firstName,
-    lastName: lastName,
-    orders: []
-  });
+  try {
+    const newClient = new Clients({
+      userId: userId,
+      username: username,
+      phoneNumber: phoneNumber,
+      firstName: firstName,
+      lastName: lastName,
+      orders: []
+    });
 
-  newClient.save((err, client) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    console.log('Новий клієнт збережений в базі даних:', client);
-  });
+    await newClient.save();
 
-  console.log(`UserId: ${userId}\nUsername: ${username}\nName: ${firstName}\nLast name: ${lastName}\nPhone number: ${phoneNumber}`);
-  bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.');
+    console.log('Новий клієнт збережений в базі даних:', newClient);
+
+    bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.');
+  } catch (error) {
+    console.error('Помилка при збереженні нового клієнта:', error);
+    bot.sendMessage(chatId, 'Виникла помилка при реєстрації. Спробуйте ще раз пізніше.');
+  }
 });
