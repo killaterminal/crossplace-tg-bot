@@ -84,7 +84,7 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Замовити ${object.name}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
               ]
             }
           };
@@ -108,7 +108,7 @@ bot.on('callback_query', async (query) => {
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Замовити ${object.name}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
               ]
             }
           };
@@ -174,7 +174,7 @@ bot.on('contact', async (msg) => {
             ],
             [
               { text: 'Мої замовлення', callback_data: 'my_orders' },
-              { text: 'Кошик', callback_data: 'cart' }
+              { text: 'Кошик 🛒', callback_data: 'cart' }
             ]
           ],
           resize_keyboard: true
