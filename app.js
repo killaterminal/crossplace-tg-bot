@@ -79,11 +79,10 @@ bot.on('callback_query', async (query) => {
     try {
       const securityObjects = await Security.find();
       if (securityObjects && securityObjects.length > 0) {
-        let response = 'Об\'єкти безпеки:\n';
-        securityObjects.forEach(object => {
-          response += `Назва: ${object.name}\nКатегорія: ${object.category}\nЦіна: ${object.price}\nОпис: ${object.description}\n\n`;
+        securityObjects.forEach(async object => {
+          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
+          await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown' });
         });
-        bot.sendMessage(chatId, response);
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
       }
