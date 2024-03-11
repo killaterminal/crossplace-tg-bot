@@ -128,7 +128,7 @@ bot.on('callback_query', async (query) => {
   }
 
 
-  else if (data.startsWith('add_to_cart_')) {
+  else if (data.startsWith('security_object_')) {
     const productId = data.split('_')[2];
     if (!shoppingCarts[chatId]) {
       shoppingCarts[chatId] = [];
