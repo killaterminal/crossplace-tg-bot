@@ -185,7 +185,7 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Ваш кошик порожній.');
     return;
   }
-
+  bot.sendMessage(chatId, `${shoppingCarts}`)
   try {
     const userId = query.from.id;
     const existingClient = await Clients.findOne({ userId: userId });
@@ -194,7 +194,6 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
       existingClient.orders.push(...shoppingCarts[chatId]);
       await existingClient.save();
       bot.sendMessage(chatId, 'Замовлення успішно збережено.');
-      // Очистить корзину после оформления заказа
       shoppingCarts[chatId] = [];
     } else {
       bot.sendMessage(chatId, 'Ви не зареєстровані в нашій системі. Будь-ласка, зареєструйтесь.');
