@@ -31,7 +31,8 @@ bot.on('callback_query', (query) => {
             request_contact: true
           }]
         ],
-        resize_keyboard: true
+        resize_keyboard: true,
+        one_time_keyboard: true
       }
     });
   }
