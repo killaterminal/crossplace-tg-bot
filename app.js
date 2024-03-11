@@ -74,6 +74,9 @@ bot.on('callback_query', (query) => {
       }
     });
   }
+  else if(data === 'catalog_security') {
+    bot.sendMessage(chatId, 'Cameras');
+  }
 
 });
 
@@ -83,8 +86,8 @@ bot.onText(/^(Каталог)$/i, (msg) => {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: 'Безпека', callback_data: 'security' },
-          { text: 'Огородження', callback_data: 'fences' }
+          { text: 'Безпека', callback_data: 'catalog_security' },
+          { text: 'Огородження', callback_data: 'catalog_fences' }
         ]
       ]
     }
