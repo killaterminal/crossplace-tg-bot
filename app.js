@@ -63,11 +63,11 @@ bot.onText(/^(Каталог)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Каталог" ще не реалізована.');
 });
-bot.onText(/^(Повідомлення)$/i, (msg) => {
+bot.onText(/^(Залишити повідомлення)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Повідомлення" ще не реалізована.');
 });
-bot.onText(/^(Замовлення)$/i, (msg) => {
+bot.onText(/^(Мої замовлення)$/i, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
 });
