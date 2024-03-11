@@ -21,8 +21,9 @@ const clientSchema = new mongoose.Schema({
 
 const Clients = mongoose.model('clients', clientSchema);
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, (msg) => {  
   const chatId = msg.chat.id;
+  const name = msg.from.first_name;
   const opts = {
     reply_markup: {
       inline_keyboard: [[
@@ -33,7 +34,7 @@ bot.onText(/\/start/, (msg) => {
       ]]
     }
   };
-  bot.sendMessage(chatId, 'Привіт! Натисни кнопку "Зареєструватися", щоб почати процес реєстрації.', opts);
+  bot.sendMessage(chatId, `Привіт, ${name}👋! Натисни кнопку "Зареєструватися", щоб почати процес реєстрації.`, opts);
 });
 
 
@@ -43,7 +44,7 @@ bot.on('callback_query', (query) => {
 
   switch (data) {
     case 'register':
-      bot.sendMessage(chatId, 'Будь-ласка, відправ свій контакт, щоб завершити реєстрацію.', {
+      bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
         reply_markup: {
           keyboard: [
             [{
