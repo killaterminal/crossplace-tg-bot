@@ -138,22 +138,28 @@ bot.on('callback_query', async (query) => {
   }
 
   else if (data === 'order') {
+    const chatId = msg.chat.id;
     if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
-      bot.sendMessage(chatId, 'Кошик порожній.');
+      bot.sendMessage(chatId, 'Ваш кошик порожній.');
       return;
     }
-    try {
-      const existingClient = await Clients.findOne({ userId: query.from.id });
-      if (existingClient) {
-        existingClient.orders.push(...shoppingCarts[chatId]);
-        await existingClient.save();
-        bot.sendMessage(chatId, 'Замовлення успішно збережено.');
+
+    let message = 'Ваш кошик:\n';
+    for (const productId of shoppingCarts[chatId]) {
+      let product;
+      try {
+        product = await Security.findById(productId);
+        if (!product) {
+          product = await Fences.findById(productId);
+        }
+        if (product) {
+          message += `Назва: ${product.name}\nЦіна: ${product.price} грн\n\n`;
+        }
+      } catch (error) {
+        console.error('Помилка при отриманні інформації про товар:', error);
       }
-    } catch (error) {
-      console.error('Помилка при збереженні замовлення:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при збереженні замовлення. Спробуйте ще раз пізніше.');
     }
-    shoppingCarts[chatId] = [];
+    bot.sendMessage(chatId, message);
   }
 });
 
