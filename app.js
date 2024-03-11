@@ -177,11 +177,11 @@ bot.onText(/^(Каталог)$/i, async (msg) => {
   };
   bot.sendMessage(chatId, 'Оберіть категорію каталогу:', options);
 });
-bot.onText(/^(Залишити повідомлення)$/i, async (msg) => {
+bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Повідомлення" ще не реалізована.');
 });
-bot.onText(/^(Мої замовлення)$/i, async (msg) => {
+bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
 });
@@ -248,10 +248,10 @@ bot.on('contact', async (msg) => {
           keyboard: [
             [
               { text: 'Каталог', callback_data: 'catalog' },
-              { text: 'Залишити повідомлення', callback_data: 'leave_message' }
+              { text: 'Залишити повідомлення ✍️', callback_data: 'leave_message' }
             ],
             [
-              { text: 'Мої замовлення', callback_data: 'my_orders' },
+              { text: 'Мої замовлення 📋', callback_data: 'my_orders' },
               { text: 'Кошик 🛒', callback_data: 'cart' }
             ]
           ],
@@ -281,11 +281,11 @@ bot.on('contact', async (msg) => {
         keyboard: [
           [
             { text: 'Каталог', callback_data: 'catalog' },
-            { text: 'Залишити повідомлення', callback_data: 'leave_message' }
+            { text: 'Залишити повідомлення ✍️', callback_data: 'leave_message' }
           ],
           [
-            { text: 'Мої замовлення', callback_data: 'my_orders' },
-            { text: 'Кошик', callback_data: 'cart' }
+            { text: 'Мої замовлення 📋', callback_data: 'my_orders' },
+            { text: 'Кошик 🛒', callback_data: 'cart' }
           ]
         ],
         resize_keyboard: true
