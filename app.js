@@ -40,7 +40,7 @@ const fencesSchema = new mongoose.Schema({
 const Fences = mongoose.model('fences', fencesSchema);
 const shoppingCarts = {};
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name;
   const opts = {
@@ -157,7 +157,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-bot.onText(/^(Каталог)$/i, (msg) => {
+bot.onText(/^(Каталог)$/i, async (msg) => {
   const chatId = msg.chat.id;
   const options = {
     reply_markup: {
@@ -171,17 +171,38 @@ bot.onText(/^(Каталог)$/i, (msg) => {
   };
   bot.sendMessage(chatId, 'Оберіть категорію каталогу:', options);
 });
-bot.onText(/^(Залишити повідомлення)$/i, (msg) => {
+bot.onText(/^(Залишити повідомлення)$/i, async (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Повідомлення" ще не реалізована.');
 });
-bot.onText(/^(Мої замовлення)$/i, (msg) => {
+bot.onText(/^(Мої замовлення)$/i, async (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
 });
-bot.onText(/^(Кошик 🛒)$/i, (msg) => {
+bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Вибачте, функція "Кошик" ще не реалізована.');
+  if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
+    bot.sendMessage(chatId, 'Ваш кошик порожній.');
+    return;
+  }
+
+  try {
+    const userId = query.from.id;
+    const existingClient = await Clients.findOne({ userId: userId });
+
+    if (existingClient) {
+      existingClient.orders.push(...shoppingCarts[chatId]);
+      await existingClient.save();
+      bot.sendMessage(chatId, 'Замовлення успішно збережено.');
+      // Очистить корзину после оформления заказа
+      shoppingCarts[chatId] = [];
+    } else {
+      bot.sendMessage(chatId, 'Ви не зареєстровані в нашій системі. Будь-ласка, зареєструйтесь.');
+    }
+  } catch (error) {
+    console.error('Помилка при збереженні замовлення:', error);
+    bot.sendMessage(chatId, 'Виникла помилка при збереженні замовлення. Спробуйте ще раз пізніше.');
+  }
 });
 
 
