@@ -60,28 +60,36 @@ bot.on('callback_query', (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
-  if(data === 'register'){
-      bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
-        reply_markup: {
-          keyboard: [
-            [{
-              text: 'Відправити номер телефону',
-              request_contact: true
-            }]
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: true
-        }
-      });
-    }
-  
+  if (data === 'register') {
+    bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
+      reply_markup: {
+        keyboard: [
+          [{
+            text: 'Відправити номер телефону',
+            request_contact: true
+          }]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: true
+      }
+    });
+  }
+
 });
 
 bot.onText(/^(Каталог)$/i, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Вибачте, функція "Каталог" ще не реалізована.');
-
-
+  const options = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: 'Безпека', callback_data: 'security' },
+          { text: 'Огородження', callback_data: 'fences' }
+        ]
+      ]
+    }
+  };
+  bot.sendMessage(chatId, 'Оберіть категорію каталогу:', options);
 });
 bot.onText(/^(Залишити повідомлення)$/i, (msg) => {
   const chatId = msg.chat.id;
