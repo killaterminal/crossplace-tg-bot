@@ -40,10 +40,11 @@ bot.on('callback_query', (query) => {
 bot.on('contact', (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
+  const username = msg.contact.username;
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
 
-  console.log(`Username: ${userId}\nName: ${firstName}\nLast name: ${lastName}\nPhone number: ${phoneNumber}`);
+  console.log(`UserId: ${userId}\nUsername: ${username}\nName: ${firstName}\nLast name: ${lastName}\nPhone number: ${phoneNumber}`);
   bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.');
 });
