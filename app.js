@@ -88,6 +88,7 @@ bot.on('contact', async (msg) => {
     const existingClient = await Clients.findOne({ userId: userId });
 
     if (existingClient) {
+      bot.deleteMessage(chatId, msg.message_id);
       bot.sendMessage(chatId, 'Ви вже зареєстровані в нашій системі.', {
         reply_markup: {
           keyboard: [
