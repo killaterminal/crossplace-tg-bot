@@ -41,23 +41,21 @@ bot.on('callback_query', (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
-  if (query.data === 'register') {
-    const chatId = query.message.chat.id;
-    bot.sendMessage(chatId, 'Будь-ласка, відправ свій контакт, щоб завершити реєстрацію.', {
-      reply_markup: {
-        keyboard: [
-          [{
-            text: 'Відправити номер телефону',
-            request_contact: true
-          }]
-        ],
-        resize_keyboard: true,
-        one_time_keyboard: true
-      }
-    });
-  }
-
   switch (data) {
+    case 'register':
+      bot.sendMessage(chatId, 'Будь-ласка, відправ свій контакт, щоб завершити реєстрацію.', {
+        reply_markup: {
+          keyboard: [
+            [{
+              text: 'Відправити номер телефону',
+              request_contact: true
+            }]
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true
+        }
+      });
+      break;
     case 'catalog':
       bot.sendMessage(chatId, 'Каталог');
       break;
