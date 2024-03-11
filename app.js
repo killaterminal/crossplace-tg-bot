@@ -103,16 +103,16 @@ bot.on('callback_query', async (query) => {
     try {
       const fencesObjects = await Fences.find();
       if (fencesObjects && fencesObjects.length > 0) {
-        fencesObjects.forEach((object) => {
-          const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок: ${object.step}\n*Опис:* ${object.description}`;
+        fencesObjects.forEach(async object => {
+          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `Об'єкт ${object._id}`, callback_data: `fences_object_${object._id}` }]
+                [{ text: `Об'єкт ${object._id}`, callback_data: `security_object_${object._id}` }]
               ]
             }
           };
-          bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
         });
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних огорож.');
