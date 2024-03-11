@@ -209,22 +209,17 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   }
 
   try {
-    const userId = msg.from.id;
-    const existingClient = await Clients.findOneAndUpdate(
-      { userId: userId },
-      { $push: { orders: cartContent } },
-      { new: true }
-    );
-
-    if (existingClient) {
-      bot.sendMessage(chatId, 'Замовлення успішно додано до бази даних.');
-      shoppingCarts[chatId] = []; 
-    } else {
-      bot.sendMessage(chatId, 'Ви не зареєстровані в нашій системі. Будь-ласка, зареєструйтесь.');
-    }
+    bot.sendMessage(chatId, cartContent);
+    bot.sendMessage(chatId, 'Натисніть кнопку, щоб підтвердити замовлення:', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Підтвердити замовлення', callback_data: 'order' }]
+        ]
+      }
+    });
   } catch (error) {
-    console.error('Помилка при додаванні замовлення в базу даних:', error);
-    bot.sendMessage(chatId, 'Виникла помилка при додаванні замовлення в базу даних. Спробуйте ще раз пізніше.');
+    console.error('Помилка при відправці повідомлення:', error);
+    bot.sendMessage(chatId, 'Виникла помилка. Спробуйте ще раз пізніше.');
   }
 });
 
