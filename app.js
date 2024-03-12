@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const mongoose = require('mongoose');
 const QRCode = require('qrcode');
 const url = require('url');
+const moment = require('moment');
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
 const bot = new TelegramBot(token, { polling: true });
@@ -22,6 +23,7 @@ const clientSchema = new mongoose.Schema({
   orders: [{
     name: String,
     price: Number,
+    date: { type: Date, default: Date.now }
   }]
 });
 const Clients = mongoose.model('clients', clientSchema);
@@ -235,6 +237,7 @@ async function addToDatabase(productId, chatId) {
       const order = {
         name: product.name,
         price: product.price,
+        date: new Date()
       };
 
       console.log('Найден продукт:', product);
@@ -274,7 +277,32 @@ bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) 
 });
 bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Вибачте, функція "Замовлення" ще не реалізована.');
+
+  try {
+    const client = await Clients.findOne({ userId: chatId });
+
+    if (client) {
+      const orders = client.orders;
+
+      if (orders.length > 0) {
+        let message = 'Ваші замовлення:\n';
+        orders.forEach((order, index) => {
+          const formattedDate = moment(order.date).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
+
+          message += `${index + 1}. Назва: ${order.name}\nЦіна: ${order.price}\nДата: ${formattedDate}\n\n`;
+        });
+
+        bot.sendMessage(chatId, message);
+      } else {
+        bot.sendMessage(chatId, 'У вас ще немає замовлень.');
+      }
+    } else {
+      bot.sendMessage(chatId, 'Вибачте, ви не зареєстровані в нашій системі.');
+    }
+  } catch (error) {
+    console.error('Помилка при отриманні замовлень:', error);
+    bot.sendMessage(chatId, 'Виникла помилка при отриманні замовлень.');
+  }
 });
 bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   const chatId = msg.chat.id;
