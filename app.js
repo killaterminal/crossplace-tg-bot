@@ -196,10 +196,9 @@ async function addToDatabase(productId, chatId) {
         price: product.price,
       };
 
-      await Clients.updateOne(
-        { userId: chatId }, 
-        { $push: { orders: order } }
-      );
+      const client = await Clients.findOne({ userId: chatId });
+      client.orders.push(order);
+      await client.save();
     }
   } catch (error) {
     console.error('Помилка при додаванні товару до бази даних:', error);
