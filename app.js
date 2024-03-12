@@ -3,6 +3,7 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const mongoose = require('mongoose');
 const QRCode = require('qrcode');
+const url = require('url');
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
 const bot = new TelegramBot(token, { polling: true });
@@ -187,15 +188,15 @@ bot.on('callback_query', async (query) => {
               pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
             }
           }
-          const qrCodeData = `order_${chatId}.pdf`;
-          const qrCodeImageBuffer = await QRCode.toBuffer(qrCodeData);
+          const targetURL = 'https://cross-place.netlify.app/';
+          const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
           pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
-          
+
           pdfDoc.end();
 
           writeStream.on('finish', () => {
             for (const productId of shoppingCarts[chatId]) {
-              addToDatabase(productId, chatId);
+              addToDatabase(productId, chatId, chatId);
             }
             shoppingCarts[chatId] = [];
             bot.sendDocument(chatId, `order_${chatId}.pdf`, {
