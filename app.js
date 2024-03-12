@@ -10,6 +10,9 @@ const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
 const bot = new TelegramBot(token, { polling: true });
 const fontPath = './fonts/font_for_pdf.ttf';
 
+const adminBotToken = '7090255239:AAH6To68kvAc0BJcBD9VLl75XmlN5FCFvR4';
+const adminChatId = 'ID_ЧАТА_АДМИНИСТРАТОРА';
+
 mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
   .catch(err => console.error('Помилка підключення до MongoDB:', err));
@@ -274,7 +277,21 @@ bot.onText(/^(Каталог)$/i, async (msg) => {
 });
 bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Вибачте, функція "Повідомлення" ще не реалізована.');
+  const messageText = msg.text;
+
+  try {
+    const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendMessage`, {
+      chat_id: adminChatId,
+      text: `Сообщение от пользователя ${chatId}:\n${messageText}`,
+    });
+    
+    console.log('Сообщение отправлено администратору:', response.data);
+    
+    bot.sendMessage(chatId, 'Ваше повідомлення отримано. Дякуємо за обережність!');
+  } catch (error) {
+    console.error('Помилка при обробці повідомлення:', error);
+    bot.sendMessage(chatId, 'Виникла помилка при обробці вашого повідомлення. Спробуйте ще раз пізніше.');
+  }
 });
 bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
   const chatId = msg.chat.id;
