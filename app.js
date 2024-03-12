@@ -204,6 +204,7 @@ bot.on('callback_query', async (query) => {
             bot.sendDocument(chatId, `order_${chatId}.pdf`, {
               caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
             });
+            bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.')
           });
         } catch (error) {
           console.error('Помилка при оформленні заказу:', error);
@@ -289,7 +290,7 @@ bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
         orders.forEach((order, index) => {
           const formattedDate = moment(order.date).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
 
-          message += `${index + 1}. Назва: ${order.name}\nЦіна: ${order.price}\nДата: ${formattedDate}\n\n`;
+          message += `${index + 1}. Назва: ${order.name}\nЦіна: ${order.price} грн\nДата: ${formattedDate}\n\n`;
         });
 
         bot.sendMessage(chatId, message);
