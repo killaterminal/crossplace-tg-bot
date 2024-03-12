@@ -197,7 +197,7 @@ async function addToDatabase(productId, chatId) {
       };
 
       await Clients.updateOne(
-        { chatId: chatId },
+        { userId: chatId }, 
         { $push: { orders: order } }
       );
     }
