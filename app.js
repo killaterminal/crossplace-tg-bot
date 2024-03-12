@@ -185,9 +185,6 @@ bot.on('callback_query', async (query) => {
           const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
           pdfDoc.pipe(writeStream);
           
-          const client = await getClientInfo(chatId);
-          const phone_number = client.phone_number;
-
           const targetURL = `tg://user?id=${chatId}`;
           const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
           pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
@@ -201,7 +198,13 @@ bot.on('callback_query', async (query) => {
           }
           const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
 
-          pdfDoc.text(`Номер телефону: ${phone_number}`);
+          const existingClient = await Clients.findOne({ userId: chatId });
+          if (existingClient) {
+            const phone_number = existingClient.phoneNumber;
+            pdfDoc.text(`Номер телефону: ${phone_number}`);
+          } else {
+            console.log("Клиент не найден");
+          }
           pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
 
           pdfDoc.end();
@@ -225,7 +228,8 @@ bot.on('callback_query', async (query) => {
             }, {
               headers: {
                 'Content-Type': 'multipart/form-data',
-              },            });
+              },
+            });
 
             console.log('Сообщение отправлено администратору:', response.data);
 
@@ -390,7 +394,7 @@ bot.on('contact', async (msg) => {
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
-  
+
   try {
     const existingClient = await Clients.findOne({ userId: userId });
 
