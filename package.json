@@ -11,6 +11,8 @@
   "dependencies": {
     "mongodb": "^6.3.0",
     "mongoose": "^8.2.1",
-    "node-telegram-bot-api": "^0.64.0"
+    "node-telegram-bot-api": "^0.64.0",
+    "pdfkit": "^0.14.0",
+    "qrcode": "^1.5.3"
   }
 }

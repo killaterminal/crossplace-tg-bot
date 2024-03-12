@@ -1,10 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const mongoose = require('mongoose');
+const QRCode = require('qrcode');
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
-
 const bot = new TelegramBot(token, { polling: true });
+const fontPath = './fonts/font_for_pdf.ttf';
 
 mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
@@ -16,7 +18,10 @@ const clientSchema = new mongoose.Schema({
   phoneNumber: String,
   firstName: String,
   lastName: String,
-  orders: [String]
+  orders: [{
+    name: String,
+    price: Number,
+  }]
 });
 const Clients = mongoose.model('clients', clientSchema);
 
@@ -170,11 +175,33 @@ bot.on('callback_query', async (query) => {
         bot.sendMessage(chatId, 'Кошик очищений.');
       } else if (choice === 2) {
         try {
+          const pdfDoc = new PDFDocument({ margin: 50, font: fontPath });
+          const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
+          pdfDoc.pipe(writeStream);
+
+          pdfDoc.text('Ваше замовлення\n');
+
           for (const productId of shoppingCarts[chatId]) {
-            await addToDatabase(productId, chatId);
+            const product = await getProductById(productId);
+            if (product) {
+              pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
+            }
           }
-          shoppingCarts[chatId] = [];
-          bot.sendMessage(chatId, 'Заказ оформлений.');
+          const qrCodeData = `order_${chatId}.pdf`;
+          const qrCodeImageBuffer = await QRCode.toBuffer(qrCodeData);
+          pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
+          
+          pdfDoc.end();
+
+          writeStream.on('finish', () => {
+            for (const productId of shoppingCarts[chatId]) {
+              addToDatabase(productId, chatId);
+            }
+            shoppingCarts[chatId] = [];
+            bot.sendDocument(chatId, `order_${chatId}.pdf`, {
+              caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
+            });
+          });
         } catch (error) {
           console.error('Помилка при оформленні заказу:', error);
           bot.sendMessage(chatId, 'Помилка при оформленні заказу.');
@@ -183,6 +210,19 @@ bot.on('callback_query', async (query) => {
     });
   }
 });
+
+async function getProductById(productId) {
+  try {
+    let product = await Security.findById(productId);
+    if (!product) {
+      product = await Fences.findById(productId);
+    }
+    return product;
+  } catch (error) {
+    console.error('Ошибка при получении информации о товаре:', error);
+    throw error;
+  }
+}
 
 async function addToDatabase(productId, chatId) {
   try {
@@ -196,9 +236,16 @@ async function addToDatabase(productId, chatId) {
         price: product.price,
       };
 
+      console.log('Найден продукт:', product);
+
       const client = await Clients.findOne({ userId: chatId });
+      console.log('Найден клиент:', client);
+
       client.orders.push(order);
+      console.log('Заказ добавлен в массив заказов клиента:', client);
+
       await client.save();
+      console.log('Клиент успешно сохранен:', client);
     }
   } catch (error) {
     console.error('Помилка при додаванні товару до бази даних:', error);
