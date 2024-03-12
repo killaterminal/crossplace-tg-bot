@@ -158,9 +158,54 @@ bot.on('callback_query', async (query) => {
         console.error('Помилка при отриманні інформації про товар:', error);
       }
     }
+    message += 'Виберіть дію:\n1. Змінити заказ\n2. Оформити заказ';
+
     bot.sendMessage(chatId, message);
+
+    bot.onText(/^(1|2)$/, async (msg, match) => {
+      const choice = parseInt(match[1]);
+
+      if (choice === 1) {
+        shoppingCarts[chatId] = [];
+        bot.sendMessage(chatId, 'Кошик очищений.');
+      } else if (choice === 2) {
+        try {
+          for (const productId of shoppingCarts[chatId]) {
+            await addToDatabase(productId, chatId);
+          }
+          shoppingCarts[chatId] = [];
+          bot.sendMessage(chatId, 'Заказ оформлений.');
+        } catch (error) {
+          console.error('Помилка при оформленні заказу:', error);
+          bot.sendMessage(chatId, 'Помилка при оформленні заказу.');
+        }
+      }
+    });
   }
 });
+
+async function addToDatabase(productId, chatId) {
+  try {
+    let product = await Security.findById(productId);
+    if (!product) {
+      product = await Fences.findById(productId);
+    }
+    if (product) {
+      const order = {
+        name: product.name,
+        price: product.price,
+      };
+
+      await Clients.updateOne(
+        { chatId: chatId },
+        { $push: { orders: order } }
+      );
+    }
+  } catch (error) {
+    console.error('Помилка при додаванні товару до бази даних:', error);
+    throw error;
+  }
+}
 
 bot.onText(/^(Каталог)$/i, async (msg) => {
   const chatId = msg.chat.id;
