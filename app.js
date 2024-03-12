@@ -185,7 +185,10 @@ bot.on('callback_query', async (query) => {
           const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
           pdfDoc.pipe(writeStream);
           
-          const targetURL = `https://t.me/${chatId}`;
+          const client = await getClientInfo(chatId);
+          const phone_number = client.phone_number;
+
+          const targetURL = `tg://user?id=${chatId}`;
           const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
           pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
           pdfDoc.text('Ваше замовлення\n');
@@ -212,11 +215,13 @@ bot.on('callback_query', async (query) => {
               caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
             });
 
+            const userLink = `<a href="tg://user?id=${chatId}">${name}</a>`;
 
             const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendDocument`, {
               chat_id: adminChatId,
               document: fs.createReadStream(`order_${chatId}.pdf`),
-              caption: `Заказ от пользователя ${chatId}\n`,
+              caption: `Заказ от пользователя ${userLink}\n`,
+              parse_mode: 'HTML',
             }, {
               headers: {
                 'Content-Type': 'multipart/form-data',
@@ -236,7 +241,6 @@ bot.on('callback_query', async (query) => {
     });
   }
 });
-let phone_number = '';
 async function getProductById(productId) {
   try {
     let product = await Security.findById(productId);
@@ -386,7 +390,7 @@ bot.on('contact', async (msg) => {
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
-  phone_number = phoneNumber;
+  
   try {
     const existingClient = await Clients.findOne({ userId: userId });
 
