@@ -11,7 +11,7 @@ const bot = new TelegramBot(token, { polling: true });
 const fontPath = './fonts/font_for_pdf.ttf';
 
 const adminBotToken = '7090255239:AAH6To68kvAc0BJcBD9VLl75XmlN5FCFvR4';
-const adminChatId = 'ID_ЧАТА_АДМИНИСТРАТОРА';
+const adminChatId = '6152008253';
 
 mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
