@@ -5,13 +5,16 @@ const mongoose = require('mongoose');
 const QRCode = require('qrcode');
 const url = require('url');
 const moment = require('moment');
+const axios = require('axios');
+const { Readable } = require('stream');
+
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
 const bot = new TelegramBot(token, { polling: true });
 const fontPath = './fonts/font_for_pdf.ttf';
 
 const adminBotToken = '7090255239:AAH6To68kvAc0BJcBD9VLl75XmlN5FCFvR4';
-const adminChatId = '6152008253';
+const adminChatId = '-4198563996';
 
 mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
@@ -71,6 +74,7 @@ bot.onText(/\/start/, async (msg) => {
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
+  const name = query.message.chat.first_name;
 
   if (data === 'register') {
     bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
@@ -109,9 +113,6 @@ bot.on('callback_query', async (query) => {
       console.error('Помилка отримання об\'єктів безпеки:', error);
       bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
     }
-
-
-
   }
   else if (data === 'catalog_fences') {
     const chatId = query.message.chat.id;
@@ -175,7 +176,6 @@ bot.on('callback_query', async (query) => {
 
     bot.onText(/^(1|2)$/, async (msg, match) => {
       const choice = parseInt(match[1]);
-
       if (choice === 1) {
         shoppingCarts[chatId] = [];
         bot.sendMessage(chatId, 'Кошик очищений.');
@@ -184,7 +184,10 @@ bot.on('callback_query', async (query) => {
           const pdfDoc = new PDFDocument({ margin: 50, font: fontPath });
           const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
           pdfDoc.pipe(writeStream);
-
+          
+          const targetURL = `https://t.me/${chatId}`;
+          const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
+          pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
           pdfDoc.text('Ваше замовлення\n');
 
           for (const productId of shoppingCarts[chatId]) {
@@ -193,13 +196,14 @@ bot.on('callback_query', async (query) => {
               pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
             }
           }
-          const targetURL = 'https://cross-place.netlify.app/';
-          const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
-          pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
+          const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
+
+          pdfDoc.text(`Номер телефону: ${phone_number}`);
+          pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
 
           pdfDoc.end();
 
-          writeStream.on('finish', () => {
+          writeStream.on('finish', async () => {
             for (const productId of shoppingCarts[chatId]) {
               addToDatabase(productId, chatId, chatId);
             }
@@ -207,6 +211,21 @@ bot.on('callback_query', async (query) => {
             bot.sendDocument(chatId, `order_${chatId}.pdf`, {
               caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
             });
+
+
+            const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendDocument`, {
+              chat_id: adminChatId,
+              document: fs.createReadStream(`order_${chatId}.pdf`),
+              caption: `Заказ от пользователя ${chatId}\n`,
+            }, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },            });
+
+            console.log('Сообщение отправлено администратору:', response.data);
+
+            bot.sendMessage(chatId, 'Ваше повідомлення отримано. Дякуємо за обережність!');
+
             bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.')
           });
         } catch (error) {
@@ -217,7 +236,7 @@ bot.on('callback_query', async (query) => {
     });
   }
 });
-
+let phone_number = '';
 async function getProductById(productId) {
   try {
     let product = await Security.findById(productId);
@@ -284,9 +303,9 @@ bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) 
       chat_id: adminChatId,
       text: `Сообщение от пользователя ${chatId}:\n${messageText}`,
     });
-    
+
     console.log('Сообщение отправлено администратору:', response.data);
-    
+
     bot.sendMessage(chatId, 'Ваше повідомлення отримано. Дякуємо за обережність!');
   } catch (error) {
     console.error('Помилка при обробці повідомлення:', error);
@@ -360,8 +379,6 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   }
 });
 
-
-
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -369,7 +386,7 @@ bot.on('contact', async (msg) => {
   const phoneNumber = msg.contact.phone_number;
   const firstName = msg.contact.first_name;
   const lastName = msg.contact.last_name;
-
+  phone_number = phoneNumber;
   try {
     const existingClient = await Clients.findOne({ userId: userId });
 
