@@ -6,7 +6,7 @@ const QRCode = require('qrcode');
 const url = require('url');
 const moment = require('moment');
 const axios = require('axios');
-const { Readable } = require('stream');
+const { Markup } = require('node-telegram-bot-api');
 
 
 const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
@@ -170,79 +170,80 @@ bot.on('callback_query', async (query) => {
         console.error('Помилка при отриманні інформації про товар:', error);
       }
     }
-    message += 'Виберіть дію:\n1. Змінити заказ\n2. Оформити заказ';
 
-    bot.sendMessage(chatId, message);
-
-    bot.onText(/^(1|2)$/, async (msg, match) => {
-      const choice = parseInt(match[1]);
-      if (choice === 1) {
-        shoppingCarts[chatId] = [];
-        bot.sendMessage(chatId, 'Кошик очищений.');
-      } else if (choice === 2) {
-        try {
-          const pdfDoc = new PDFDocument({ margin: 50, font: fontPath });
-          const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
-          pdfDoc.pipe(writeStream);
-          
-          const targetURL = `tg://user?id=${chatId}`;
-          const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
-          pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
-          pdfDoc.text('Ваше замовлення\n');
-
-          for (const productId of shoppingCarts[chatId]) {
-            const product = await getProductById(productId);
-            if (product) {
-              pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
-            }
-          }
-          const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
-
-          const existingClient = await Clients.findOne({ userId: chatId });
-          if (existingClient) {
-            const phone_number = existingClient.phoneNumber;
-            pdfDoc.text(`Номер телефону: ${phone_number}`);
-          } else {
-            console.log("Клиент не найден");
-          }
-          pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
-
-          pdfDoc.end();
-
-          writeStream.on('finish', async () => {
-            for (const productId of shoppingCarts[chatId]) {
-              addToDatabase(productId, chatId, chatId);
-            }
-            shoppingCarts[chatId] = [];
-            bot.sendDocument(chatId, `order_${chatId}.pdf`, {
-              caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
-            });
-
-            const userLink = `<a href="tg://user?id=${chatId}">${name}</a>`;
-
-            const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendDocument`, {
-              chat_id: adminChatId,
-              document: fs.createReadStream(`order_${chatId}.pdf`),
-              caption: `Заказ от пользователя ${userLink}\n`,
-              parse_mode: 'HTML',
-            }, {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            });
-
-            console.log('Сообщение отправлено администратору:', response.data);
-
-            bot.sendMessage(chatId, 'Ваше повідомлення отримано. Дякуємо за обережність!');
-
-            bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.')
-          });
-        } catch (error) {
-          console.error('Помилка при оформленні заказу:', error);
-          bot.sendMessage(chatId, 'Помилка при оформленні заказу.');
-        }
+    bot.sendMessage(chatId, message, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Змінити заказ', callback_data: 'change_order' }],
+          [{ text: 'Оформити заказ', callback_data: 'accept_order' }]
+        ]
       }
     });
+  }
+  else if (data === 'change_order') {
+    shoppingCarts[chatId] = [];
+    bot.sendMessage(chatId, 'Кошик очищений.');
+  }
+  else if (data === 'accept_order') {
+    try {
+      const pdfDoc = new PDFDocument({ margin: 50, font: fontPath });
+      const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
+      pdfDoc.pipe(writeStream);
+
+      const targetURL = `tg://user?id=${chatId}`;
+      const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
+      pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
+      pdfDoc.text('Ваше замовлення\n');
+
+      for (const productId of shoppingCarts[chatId]) {
+        const product = await getProductById(productId);
+        if (product) {
+          pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
+        }
+      }
+      const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
+
+      const existingClient = await Clients.findOne({ userId: chatId });
+      if (existingClient) {
+        const phone_number = existingClient.phoneNumber;
+        pdfDoc.text(`Номер телефону: ${phone_number}`);
+      } else {
+        console.log("Клиент не найден");
+      }
+      pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
+
+      pdfDoc.end();
+
+      writeStream.on('finish', async () => {
+        for (const productId of shoppingCarts[chatId]) {
+          addToDatabase(productId, chatId, chatId);
+        }
+        shoppingCarts[chatId] = [];
+        bot.sendDocument(chatId, `order_${chatId}.pdf`, {
+          caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
+        });
+
+        const userLink = `<a href="tg://user?id=${chatId}">${name}</a>`;
+
+        const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendDocument`, {
+          chat_id: adminChatId,
+          document: fs.createReadStream(`order_${chatId}.pdf`),
+          caption: `Заказ от пользователя ${userLink}\n`,
+          parse_mode: 'HTML',
+        }, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log('Сообщение отправлено администратору:', response.data);
+
+        bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.')
+      });
+    } catch (error) {
+      console.error('Помилка при оформленні заказу:', error);
+      bot.sendMessage(chatId, 'Помилка при оформленні заказу.');
+    }
   }
 });
 async function getProductById(productId) {
