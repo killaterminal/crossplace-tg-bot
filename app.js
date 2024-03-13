@@ -95,16 +95,23 @@ bot.on('callback_query', async (query) => {
     try {
       const securityObjects = await Security.find();
       if (securityObjects && securityObjects.length > 0) {
-        securityObjects.forEach((object) => {
-          const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Опис:* ${object.description}`;
-          const options = {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
-              ]
-            }
-          };
-          bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+        securityObjects.forEach(async (object) => {
+          const exchangeRate = await getExchangeRate();
+          if (exchangeRate) {
+            const priceInUAH = object.price * exchangeRate;
+
+            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${priceInUAH.toFixed(2)} грн\n*Опис:* ${object.description}`;
+            const options = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
+                ]
+              }
+            };
+            bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          } else {
+            console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
+          }
         });
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
@@ -120,15 +127,21 @@ bot.on('callback_query', async (query) => {
       const fencesObjects = await Fences.find();
       if (fencesObjects && fencesObjects.length > 0) {
         fencesObjects.forEach(async object => {
-          const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
-          const options = {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `fences_object_${object._id}` }]
-              ]
-            }
-          };
-          await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          const exchangeRate = await getExchangeRate();
+          if (exchangeRate) {
+            const priceInUAH = object.price * exchangeRate;
+            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${priceInUAH.toFixed(2)} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+            const options = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: `До кошику 🛒\n${object.name}`, callback_data: `fences_object_${object._id}` }]
+                ]
+              }
+            };
+            await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          } else {
+            console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
+          }
         });
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних огорож.');
@@ -171,7 +184,13 @@ bot.on('callback_query', async (query) => {
           product = await Fences.findById(productId);
         }
         if (product) {
-          message += `Назва: ${product.name}\nЦіна: ${product.price} грн\n\n`;
+          const exchangeRate = await getExchangeRate();
+          if (exchangeRate) {
+            const priceInUAH = product.price * exchangeRate;
+            message += `Назва: ${product.name}\nЦіна: ${priceInUAH.toFixed(2)} грн\n\n`;
+          }
+        } else {
+          console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
         }
       } catch (error) {
         console.error('Помилка при отриманні інформації про товар:', error);
@@ -206,11 +225,17 @@ bot.on('callback_query', async (query) => {
       pdfDoc.image(qrCodeImageBuffer, startX, startY, { fit: [100, 100], align: 'right' });
       pdfDoc.text('Ваше замовлення\n', 50, startY);
 
-      for (const productId of shoppingCarts[chatId]) {
-        const product = await getProductById(productId);
-        if (product) {
-          pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${product.price} грн\n\n`);
+      const exchangeRate = await getExchangeRate();
+      if (exchangeRate) {
+        for (const productId of shoppingCarts[chatId]) {
+          const product = await getProductById(productId);
+          if (product) {
+            const priceInUAH = product.price * exchangeRate;
+            pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${priceInUAH.toFixed(2)} грн\n\n`);
+          }
         }
+      } else {
+        console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
       }
       const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
 
@@ -470,3 +495,14 @@ bot.on('contact', async (msg) => {
     });
   }
 });
+
+const getExchangeRate = async () => {
+  try {
+    const response = await axios.get('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
+    const usdRate = response.data.find(currency => currency.cc === 'USD');
+    return usdRate.rate;
+  } catch (error) {
+    console.error('Ошибка при получении курса доллара:', error);
+    return null;
+  }
+};
