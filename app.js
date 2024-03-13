@@ -100,11 +100,11 @@ bot.on('callback_query', async (query) => {
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
 
-            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${priceInUAH.toFixed(2)} грн\n*Опис:* ${object.description}`;
+            const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Опис:* ${object.description}`;
             const options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
+                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `security_object_${object._id}` }]
                 ]
               }
             };
@@ -130,11 +130,11 @@ bot.on('callback_query', async (query) => {
           const exchangeRate = await getExchangeRate();
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
-            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${priceInUAH.toFixed(2)} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
             const options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `До кошику 🛒\n${object.name}`, callback_data: `fences_object_${object._id}` }]
+                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
                 ]
               }
             };
@@ -187,7 +187,7 @@ bot.on('callback_query', async (query) => {
           const exchangeRate = await getExchangeRate();
           if (exchangeRate) {
             const priceInUAH = product.price * exchangeRate;
-            message += `Назва: ${product.name}\nЦіна: ${priceInUAH.toFixed(2)} грн\n\n`;
+            message += `Назва: ${product.name}\nЦіна: ${priceInUAH.toFixed(0)} грн\n\n`;
           }
         } else {
           console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
@@ -223,7 +223,9 @@ bot.on('callback_query', async (query) => {
       const startY = 50;
 
       pdfDoc.image(qrCodeImageBuffer, startX, startY, { fit: [100, 100], align: 'right' });
-      pdfDoc.text('Ваше замовлення\n', 50, startY);
+      pdfDoc.text(`Замовлення №${chatId}\n\n`, 50, startY);
+
+      let totalPrice = 0;
 
       const exchangeRate = await getExchangeRate();
       if (exchangeRate) {
@@ -231,18 +233,22 @@ bot.on('callback_query', async (query) => {
           const product = await getProductById(productId);
           if (product) {
             const priceInUAH = product.price * exchangeRate;
-            pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${priceInUAH.toFixed(2)} грн\n\n`);
+            totalPrice += priceInUAH
+            pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${priceInUAH.toFixed(0)} грн\n\n`);
           }
         }
       } else {
         console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
       }
+
+      pdfDoc.text(`Загальна сума замовлення: ${totalPrice.toFixed(0)} грн\n\n`);
+
       const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
 
       const existingClient = await Clients.findOne({ userId: chatId });
       if (existingClient) {
         const phone_number = existingClient.phoneNumber;
-        pdfDoc.text(`Номер телефону: ${phone_number}`);
+        pdfDoc.text(`Номер телефону замовника: ${phone_number}`);
         pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
       } else {
         console.log("Клиент не найден");
@@ -403,7 +409,14 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
         product = await Fences.findById(productId);
       }
       if (product) {
-        cartContent += `Назва: ${product.name}\nЦіна: ${product.price} грн\n\n`;
+        const exchangeRate = await getExchangeRate();
+        if (exchangeRate) {
+          const priceInUAH = product.price * exchangeRate;
+          cartContent += `Назва: ${product.name}\nЦіна: ${priceInUAH.toFixed(0)} грн\n\n`;
+        }
+        else {
+          console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
+        }
       }
     } catch (error) {
       console.error('Помилка при отриманні інформації про товар:', error);
