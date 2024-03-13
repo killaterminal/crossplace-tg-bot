@@ -14,7 +14,7 @@ const bot = new TelegramBot(token, { polling: true });
 const fontPath = './fonts/font_for_pdf.ttf';
 
 const adminBotToken = '7090255239:AAH6To68kvAc0BJcBD9VLl75XmlN5FCFvR4';
-const adminChatId = '-4198563996';
+const adminChatId = '-1001854646734';
 
 mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
@@ -120,11 +120,11 @@ bot.on('callback_query', async (query) => {
       const fencesObjects = await Fences.find();
       if (fencesObjects && fencesObjects.length > 0) {
         fencesObjects.forEach(async object => {
-          const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+          const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Ціна:* ${object.price} грн\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
           const options = {
             reply_markup: {
               inline_keyboard: [
-                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `security_object_${object._id}` }]
+                [{ text: `До кошику 🛒\n${object.name}`, callback_data: `fences_object_${object._id}` }]
               ]
             }
           };
@@ -148,7 +148,14 @@ bot.on('callback_query', async (query) => {
     shoppingCarts[chatId].push(productId);
     bot.sendMessage(chatId, 'Товар додано до кошика.');
   }
-
+  else if (data.startsWith('fences_object_')) {
+    const productId = data.split('_')[2];
+    if (!shoppingCarts[chatId]) {
+      shoppingCarts[chatId] = [];
+    }
+    shoppingCarts[chatId].push(productId);
+    bot.sendMessage(chatId, 'Товар додано до кошика.');
+  }
   else if (data === 'order') {
     if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
       bot.sendMessage(chatId, 'Ваш кошик порожній.');
@@ -192,8 +199,12 @@ bot.on('callback_query', async (query) => {
 
       const targetURL = `tg://user?id=${chatId}`;
       const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
-      pdfDoc.image(qrCodeImageBuffer, { fit: [100, 100], align: 'right' });
-      pdfDoc.text('Ваше замовлення\n');
+
+      const startX = pdfDoc.page.width - 150;
+      const startY = 50;
+
+      pdfDoc.image(qrCodeImageBuffer, startX, startY, { fit: [100, 100], align: 'right' });
+      pdfDoc.text('Ваше замовлення\n', 50, startY);
 
       for (const productId of shoppingCarts[chatId]) {
         const product = await getProductById(productId);
@@ -207,10 +218,11 @@ bot.on('callback_query', async (query) => {
       if (existingClient) {
         const phone_number = existingClient.phoneNumber;
         pdfDoc.text(`Номер телефону: ${phone_number}`);
+        pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
       } else {
         console.log("Клиент не найден");
+        pdfDoc.text(`Клієнт незареєстрований`);
       }
-      pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
 
       pdfDoc.end();
 
