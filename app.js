@@ -9,7 +9,7 @@ const axios = require('axios');
 const { Markup } = require('node-telegram-bot-api');
 
 
-const token = '6256350860:AAG4zBfGIcP1mNEimo4hyTZ9Yoiz6ndm-Ok';
+const token = '7067134649:AAG4bxXMOcOnkUYTMus02ilWPjXPXDosvik';
 const bot = new TelegramBot(token, { polling: true });
 const fontPath = './fonts/font_for_pdf.ttf';
 
