@@ -3,60 +3,23 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const mongoose = require('mongoose');
 const QRCode = require('qrcode');
-const url = require('url');
 const moment = require('moment');
 const axios = require('axios');
-const { Markup } = require('node-telegram-bot-api');
 
+const { token, adminBotToken, adminChatId } = require('./config');
+const { fontPath, databaseURL } = require('./config');
 
-const token = '7067134649:AAG4bxXMOcOnkUYTMus02ilWPjXPXDosvik';
 const bot = new TelegramBot(token, { polling: true });
-const fontPath = './fonts/font_for_pdf.ttf';
 
-const adminBotToken = '7090255239:AAH6To68kvAc0BJcBD9VLl75XmlN5FCFvR4';
-const adminChatId = '-1001854646734';
-
-mongoose.connect('mongodb+srv://admin:123zxc34@cluster0.hoxv5bc.mongodb.net/crossplace', { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Підключено до MongoDB'))
   .catch(err => console.error('Помилка підключення до MongoDB:', err));
 
-const clientSchema = new mongoose.Schema({
-  userId: Number,
-  username: String,
-  phoneNumber: String,
-  firstName: String,
-  lastName: String,
-  orders: [{
-    name: String,
-    price: Number,
-    date: { type: Date, default: Date.now }
-  }]
-});
-const Clients = mongoose.model('clients', clientSchema);
-
-const securitySchema = new mongoose.Schema({
-  name: String,
-  category: String,
-  price: Number,
-  description: String,
-  image: String
-});
-const Security = mongoose.model('security', securitySchema);
-
-const fencesSchema = new mongoose.Schema({
-  name: String,
-  category: String,
-  price: Number,
-  description: String,
-  image: String,
-  step: Number
-});
-const Fences = mongoose.model('fences', fencesSchema);
-const shoppingCarts = {};
+const { Clients, Security, Fences, Repair } = require('./models');
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
-  const name = msg.from.first_name;
+  const { first_name: firstName } = msg.from;
   const opts = {
     reply_markup: {
       inline_keyboard: [[
@@ -67,17 +30,17 @@ bot.onText(/\/start/, async (msg) => {
       ]]
     }
   };
-  bot.sendMessage(chatId, `Привіт, ${name}👋! Натисни кнопку "Зареєструватися", щоб почати процес реєстрації.`, opts);
+  bot.sendMessage(chatId, `Привіт, ${firstName} 👋🏼! Натисни кнопку "Зареєструватися", щоб почати процес реєстрації. 🖇`, opts);
 });
 
-
+//обработчик команд
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
   const name = query.message.chat.first_name;
-
+  //команда регистрации
   if (data === 'register') {
-    bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію.', {
+    bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію. ✌🏼', {
       reply_markup: {
         keyboard: [
           [{
@@ -90,6 +53,7 @@ bot.on('callback_query', async (query) => {
       }
     });
   }
+  //команда вывода товаров безопасноти
   else if (data === 'catalog_security') {
     const chatId = query.message.chat.id;
     try {
@@ -114,11 +78,43 @@ bot.on('callback_query', async (query) => {
           }
         });
       } else {
-        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки.');
+        bot.sendMessage(chatId, 'На жаль, немає доступних об\'єктів безпеки. 😐');
       }
     } catch (error) {
       console.error('Помилка отримання об\'єктів безпеки:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки.');
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки 🙁 Спробуйте пізніше');
+    }
+  }
+  //команда вывода товаров ограждения
+  else if (data === 'catalog_fences') {
+    const chatId = query.message.chat.id;
+    try {
+      const fencesObjects = await Fences.find();
+      if (fencesObjects && fencesObjects.length > 0) {
+        fencesObjects.forEach(async object => {
+          const exchangeRate = await getExchangeRate();
+          if (exchangeRate) {
+            const priceInUAH = object.price * exchangeRate;
+            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+            const options = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
+                ]
+              }
+            };
+            await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          } else {
+            console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
+          }
+        });
+      } else {
+        bot.sendMessage(chatId, 'На жаль, немає доступних огорож. 😐');
+      }
+
+    } catch (error) {
+      console.error('Помилка отримання огорож:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож 😔 Спробуйте пізніше');
     }
   }
   else if (data === 'catalog_fences') {
@@ -146,13 +142,12 @@ bot.on('callback_query', async (query) => {
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних огорож.');
       }
-    } catch (error) {
-      console.error('Помилка отримання огорож:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож.');
+    }
+    catch {
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні послуг ремонту 🙄 Спробуйте пізніше.');
     }
   }
-
-
+  //добавление товаров безопасноти в корзину
   else if (data.startsWith('security_object_')) {
     const productId = data.split('_')[2];
     if (!shoppingCarts[chatId]) {
@@ -161,6 +156,7 @@ bot.on('callback_query', async (query) => {
     shoppingCarts[chatId].push(productId);
     bot.sendMessage(chatId, 'Товар додано до кошика.');
   }
+  //добавление товаров ограждения в корзину
   else if (data.startsWith('fences_object_')) {
     const productId = data.split('_')[2];
     if (!shoppingCarts[chatId]) {
@@ -169,6 +165,7 @@ bot.on('callback_query', async (query) => {
     shoppingCarts[chatId].push(productId);
     bot.sendMessage(chatId, 'Товар додано до кошика.');
   }
+  //формирование заказа
   else if (data === 'order') {
     if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
       bot.sendMessage(chatId, 'Ваш кошик порожній.');
@@ -206,10 +203,12 @@ bot.on('callback_query', async (query) => {
       }
     });
   }
+  //изменение заказа (очиска корзины)
   else if (data === 'change_order') {
     shoppingCarts[chatId] = [];
     bot.sendMessage(chatId, 'Кошик очищений.');
   }
+  //формирование ПДФ файла и отправка админ боту
   else if (data === 'accept_order') {
     try {
       const pdfDoc = new PDFDocument({ margin: 50, font: fontPath });
@@ -289,50 +288,8 @@ bot.on('callback_query', async (query) => {
     }
   }
 });
-async function getProductById(productId) {
-  try {
-    let product = await Security.findById(productId);
-    if (!product) {
-      product = await Fences.findById(productId);
-    }
-    return product;
-  } catch (error) {
-    console.error('Ошибка при получении информации о товаре:', error);
-    throw error;
-  }
-}
 
-async function addToDatabase(productId, chatId) {
-  try {
-    let product = await Security.findById(productId);
-    if (!product) {
-      product = await Fences.findById(productId);
-    }
-    if (product) {
-      const order = {
-        name: product.name,
-        price: product.price,
-        date: new Date()
-      };
-
-      console.log('Найден продукт:', product);
-
-      const client = await Clients.findOne({ userId: chatId });
-      console.log('Найден клиент:', client);
-
-      client.orders.push(order);
-      console.log('Заказ добавлен в массив заказов клиента:', client);
-
-      await client.save();
-      console.log('Клиент успешно сохранен:', client);
-    }
-  } catch (error) {
-    console.error('Помилка при додаванні товару до бази даних:', error);
-    throw error;
-  }
-}
-
-bot.onText(/^(Каталог)$/i, async (msg) => {
+bot.onText(/^(Каталог 🔎)$/i, async (msg) => {
   const chatId = msg.chat.id;
   const options = {
     reply_markup: {
@@ -346,6 +303,7 @@ bot.onText(/^(Каталог)$/i, async (msg) => {
   };
   bot.sendMessage(chatId, 'Оберіть категорію каталогу:', options);
 });
+
 bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) => {
   const chatId = msg.chat.id;
   const messageText = msg.text;
@@ -364,6 +322,7 @@ bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) 
     bot.sendMessage(chatId, 'Виникла помилка при обробці вашого повідомлення. Спробуйте ще раз пізніше.');
   }
 });
+
 bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -393,6 +352,7 @@ bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Виникла помилка при отриманні замовлень.');
   }
 });
+
 bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   const chatId = msg.chat.id;
   if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
@@ -437,7 +397,50 @@ bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Виникла помилка. Спробуйте ще раз пізніше.');
   }
 });
+//получить товары
+async function getProductById(productId) {
+  try {
+    let product = await Security.findById(productId);
+    if (!product) {
+      product = await Fences.findById(productId);
+    }
+    return product;
+  } catch (error) {
+    console.error('Ошибка при получении информации о товаре:', error);
+    throw error;
+  }
+}
+//добавление нового клиента в БД и проверка на уже существующего клиента
+async function addToDatabase(productId, chatId) {
+  try {
+    let product = await Security.findById(productId);
+    if (!product) {
+      product = await Fences.findById(productId);
+    }
+    if (product) {
+      const order = {
+        name: product.name,
+        price: product.price,
+        date: new Date()
+      };
 
+      console.log('Найден продукт:', product);
+
+      const client = await Clients.findOne({ userId: chatId });
+      console.log('Найден клиент:', client);
+
+      client.orders.push(order);
+      console.log('Заказ добавлен в массив заказов клиента:', client);
+
+      await client.save();
+      console.log('Клиент успешно сохранен:', client);
+    }
+  } catch (error) {
+    console.error('Помилка при додаванні товару до бази даних:', error);
+    throw error;
+  }
+}
+//отправка номера (как контакт) для дальнейшней работы с клиентом 
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -455,7 +458,7 @@ bot.on('contact', async (msg) => {
         reply_markup: {
           keyboard: [
             [
-              { text: 'Каталог', callback_data: 'catalog' },
+              { text: 'Каталог 🔎', callback_data: 'catalog' },
               { text: 'Залишити повідомлення ✍️', callback_data: 'leave_message' }
             ],
             [
@@ -488,7 +491,7 @@ bot.on('contact', async (msg) => {
       reply_markup: {
         keyboard: [
           [
-            { text: 'Каталог', callback_data: 'catalog' },
+            { text: 'Каталог 🔎', callback_data: 'catalog' },
             { text: 'Залишити повідомлення ✍️', callback_data: 'leave_message' }
           ],
           [
@@ -508,7 +511,7 @@ bot.on('contact', async (msg) => {
     });
   }
 });
-
+//курс доллара
 const getExchangeRate = async () => {
   try {
     const response = await axios.get('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
