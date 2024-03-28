@@ -16,6 +16,7 @@ mongoose.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true 
   .catch(err => console.error('Помилка підключення до MongoDB:', err));
 
 const { Clients, Security, Fences, Repair } = require('./models');
+const shoppingCarts = {};
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -82,7 +83,7 @@ bot.on('callback_query', async (query) => {
       }
     } catch (error) {
       console.error('Помилка отримання об\'єктів безпеки:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки 🙁 Спробуйте пізніше');
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні об\'єктів безпеки. Спробуйте пізніше 🙁');
     }
   }
   //команда вывода товаров ограждения
@@ -95,7 +96,7 @@ bot.on('callback_query', async (query) => {
           const exchangeRate = await getExchangeRate();
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
-            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+            const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Опис:* ${object.description}`;
             const options = {
               reply_markup: {
                 inline_keyboard: [
@@ -114,7 +115,7 @@ bot.on('callback_query', async (query) => {
 
     } catch (error) {
       console.error('Помилка отримання огорож:', error);
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож 😔 Спробуйте пізніше');
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні огорож. Спробуйте пізніше 😔');
     }
   }
   else if (data === 'catalog_fences') {
@@ -126,7 +127,7 @@ bot.on('callback_query', async (query) => {
           const exchangeRate = await getExchangeRate();
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
-            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Крок:* ${object.step}\n*Опис:* ${object.description}`;
+            const response = `*ID:* ${object._id}\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Опис:* ${object.description}`;
             const options = {
               reply_markup: {
                 inline_keyboard: [
@@ -140,11 +141,43 @@ bot.on('callback_query', async (query) => {
           }
         });
       } else {
-        bot.sendMessage(chatId, 'На жаль, немає доступних огорож.');
+        bot.sendMessage(chatId, 'На жаль, немає доступних огорож. 😐');
       }
     }
     catch {
-      bot.sendMessage(chatId, 'Виникла помилка при отриманні послуг ремонту 🙄 Спробуйте пізніше.');
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні послуг ремонту. Спробуйте пізніше 🙄');
+    }
+  }
+  //вывод услуг по ремонту
+  else if (data === 'catalog_repair') {
+    const chatId = query.message.chat.id;
+    try {
+      const fencesObjects = await Repair.find();
+      if (fencesObjects && fencesObjects.length > 0) {
+        fencesObjects.forEach(async object => {
+          const exchangeRate = await getExchangeRate();
+          if (exchangeRate) {
+            const priceInUAH = object.price * exchangeRate;
+            const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Опис:* ${object.description}\n`;
+            const options = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
+                ]
+              }
+            };
+            await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+          } else {
+            console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
+          }
+        });
+      } else {
+        bot.sendMessage(chatId, 'На жаль, немає доступних послуг по ремонту. 😐');
+      }
+
+    } catch (error) {
+      console.error('Помилка отримання огорож:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при полсуг. Спробуйте пізніше 😔');
     }
   }
   //добавление товаров безопасноти в корзину
@@ -296,7 +329,8 @@ bot.onText(/^(Каталог 🔎)$/i, async (msg) => {
       inline_keyboard: [
         [
           { text: 'Безпека', callback_data: 'catalog_security' },
-          { text: 'Огородження', callback_data: 'catalog_fences' }
+          { text: 'Огородження', callback_data: 'catalog_fences' },
+          { text: 'Ремонт', callback_data: 'catalog_repair' }
         ]
       ]
     }
