@@ -162,7 +162,7 @@ bot.on('callback_query', async (query) => {
             const options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
+                  [{ text: `Хочу послугу 🛠️ ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
                 ]
               }
             };
