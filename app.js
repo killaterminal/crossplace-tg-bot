@@ -17,6 +17,7 @@ mongoose.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true 
 
 const { Clients, Security, Fences, Repair } = require('./models');
 const shoppingCarts = {};
+const repairService = {};
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -154,23 +155,29 @@ bot.on('callback_query', async (query) => {
     try {
       const fencesObjects = await Repair.find();
       if (fencesObjects && fencesObjects.length > 0) {
-        fencesObjects.forEach(async object => {
+        for (const object of fencesObjects) {
           const exchangeRate = await getExchangeRate();
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
             const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Опис:* ${object.description}\n`;
-            const options = {
+
+            let options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `Хочу послугу 🛠️ ${priceInUAH.toFixed(0)} грн`, callback_data: `fences_object_${object._id}` }]
+                  [{ text: `Хочу послугу 🛠️ ${priceInUAH.toFixed(0)} грн`, callback_data: `repair_object_${object._id}` }]
                 ]
               }
             };
-            await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+
+            if (object.image) {
+              await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+            } else {
+              await bot.sendMessage(chatId, response, { parse_mode: 'Markdown', reply_markup: options.reply_markup });
+            }
           } else {
             console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
           }
-        });
+        }
       } else {
         bot.sendMessage(chatId, 'На жаль, немає доступних послуг по ремонту. 😐');
       }
@@ -191,6 +198,14 @@ bot.on('callback_query', async (query) => {
   }
   //добавление товаров ограждения в корзину
   else if (data.startsWith('fences_object_')) {
+    const productId = data.split('_')[2];
+    if (!shoppingCarts[chatId]) {
+      shoppingCarts[chatId] = [];
+    }
+    shoppingCarts[chatId].push(productId);
+    bot.sendMessage(chatId, 'Товар додано до кошика.');
+  }
+  else if (data.startsWith('repair_object_')) {
     const productId = data.split('_')[2];
     if (!shoppingCarts[chatId]) {
       shoppingCarts[chatId] = [];
