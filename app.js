@@ -12,8 +12,8 @@ const { fontPath, databaseURL } = require('./config');
 const bot = new TelegramBot(token, { polling: true });
 
 mongoose.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Підключено до MongoDB'))
-  .catch(err => console.error('Помилка підключення до MongoDB:', err));
+  .then(() => console.log('Подключено к MongoDB'))
+  .catch(err => console.error('Ошибка при подключении к MongoDB:', err));
 
 const { Clients, Security, Fences, Repair } = require('./models');
 const shoppingCarts = {};
@@ -40,6 +40,16 @@ bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
   const name = query.message.chat.first_name;
+  const targetURL = `tg://user?id=${chatId}`;
+
+  const addToCart = (chatId, productId, cartType) => {
+    if (!cartType[chatId]) {
+      cartType[chatId] = [];
+    }
+    cartType[chatId].push(productId);
+    bot.sendMessage(chatId, 'Товар додано до кошика.');
+  };
+
   //команда регистрации
   if (data === 'register') {
     bot.sendMessage(chatId, 'Будь-ласка, відправ свій номер, щоб завершити реєстрацію. ✌🏼', {
@@ -164,7 +174,7 @@ bot.on('callback_query', async (query) => {
             let options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `Хочу послугу 🛠️ ${priceInUAH.toFixed(0)} грн`, callback_data: `repair_object_${object._id}` }]
+                  [{ text: `Хочу послугу 🛠️`, callback_data: `repair_object_${object._id}` }]
                 ]
               }
             };
@@ -183,7 +193,7 @@ bot.on('callback_query', async (query) => {
       }
 
     } catch (error) {
-      console.error('Помилка отримання огорож:', error);
+      console.error('Ошибка при получении услуг ремонта:', error);
       bot.sendMessage(chatId, 'Виникла помилка при полсуг. Спробуйте пізніше 😔');
     }
   }
@@ -207,10 +217,10 @@ bot.on('callback_query', async (query) => {
   }
   else if (data.startsWith('repair_object_')) {
     const productId = data.split('_')[2];
-    if (!shoppingCarts[chatId]) {
-      shoppingCarts[chatId] = [];
+    if (!repairService[chatId]) {
+      repairService[chatId] = [];
     }
-    shoppingCarts[chatId].push(productId);
+    repairService[chatId].push(productId);
     bot.sendMessage(chatId, 'Товар додано до кошика.');
   }
   //формирование заказа
@@ -263,43 +273,76 @@ bot.on('callback_query', async (query) => {
       const writeStream = fs.createWriteStream(`order_${chatId}.pdf`);
       pdfDoc.pipe(writeStream);
 
-      const targetURL = `tg://user?id=${chatId}`;
       const qrCodeImageBuffer = await QRCode.toBuffer(targetURL);
 
       const startX = pdfDoc.page.width - 150;
       const startY = 50;
 
       pdfDoc.image(qrCodeImageBuffer, startX, startY, { fit: [100, 100], align: 'right' });
+      pdfDoc.fontSize(16);
       pdfDoc.text(`Замовлення №${chatId}\n\n`, 50, startY);
+      pdfDoc.fontSize(12);
 
       let totalPrice = 0;
 
       const exchangeRate = await getExchangeRate();
       if (exchangeRate) {
+        const startYTable = 150;
+        const rowHeight = 20; // высота строки
+        const columnWidths = [50, 300, 100]; // ширина каждого столбца
+
+        pdfDoc.text('№', 70, startYTable);
+        pdfDoc.text('Назва товару', 100, startYTable);
+        pdfDoc.text('Ціна (грн)', 400, startYTable);
+
+        pdfDoc.moveTo(45, startYTable + 15).lineTo(500, startYTable + 15).stroke();
+
+        let currentY = startYTable + rowHeight; 
+        let productIndex = 1; 
+
         for (const productId of shoppingCarts[chatId]) {
           const product = await getProductById(productId);
           if (product) {
             const priceInUAH = product.price * exchangeRate;
-            totalPrice += priceInUAH
-            pdfDoc.text(`Назва товару: ${product.name}\nЦіна: ${priceInUAH.toFixed(0)} грн\n\n`);
+            totalPrice += priceInUAH;
+
+            pdfDoc.rect(45, currentY - rowHeight, 455, rowHeight).stroke();
+
+            pdfDoc.text(productIndex, 50, currentY, { width: columnWidths[0], align: 'center' });
+            pdfDoc.text(product.name, 100, currentY, { width: columnWidths[1], height: rowHeight, align: 'left', continued: false });
+            pdfDoc.text(priceInUAH.toFixed(0), 350, currentY, { width: columnWidths[2], align: 'right' });
+
+            currentY += rowHeight; 
+            productIndex++;
           }
+        }
+
+        pdfDoc.moveTo(45, currentY).lineTo(500, currentY).stroke();
+
+        const totalRowY = currentY; 
+        pdfDoc.rect(45, totalRowY - rowHeight, 455, rowHeight).stroke(); 
+
+        // pdfDoc.text('Загальна сума:', 50, totalRowY, { width: columnWidths[0], align: 'center' });
+        pdfDoc.text(`Загальна сума: ${totalPrice.toFixed(0)} грн`, 50, totalRowY + 2, { width: 500, align: 'left' });
+
+        pdfDoc.moveTo(45, totalRowY + rowHeight).lineTo(500, totalRowY + rowHeight).stroke();
+
+        const infoStartY = totalRowY + rowHeight + 20; 
+
+        const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
+        
+
+        const existingClient = await Clients.findOne({ userId: chatId });
+        if (existingClient) {
+          const phone_number = existingClient.phoneNumber;
+          pdfDoc.text(`Номер телефону замовника: ${phone_number}`, 50, infoStartY);
+          pdfDoc.text(`Дата створення замовлення: ${formattedDate}`, 50, infoStartY + 15);
+        } else {
+          console.log("Клиент не найден");
+          pdfDoc.text(`Клієнт незареєстрований`, 50, infoStartY);
         }
       } else {
         console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
-      }
-
-      pdfDoc.text(`Загальна сума замовлення: ${totalPrice.toFixed(0)} грн\n\n`);
-
-      const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
-
-      const existingClient = await Clients.findOne({ userId: chatId });
-      if (existingClient) {
-        const phone_number = existingClient.phoneNumber;
-        pdfDoc.text(`Номер телефону замовника: ${phone_number}`);
-        pdfDoc.text(`Дата створення замовлення: ${formattedDate}`)
-      } else {
-        console.log("Клиент не найден");
-        pdfDoc.text(`Клієнт незареєстрований`);
       }
 
       pdfDoc.end();
@@ -313,12 +356,12 @@ bot.on('callback_query', async (query) => {
           caption: 'Замовлення оформлено. Ваше замовлення у прикріпленому PDF-файлі.'
         });
 
-        const userLink = `<a href="tg://user?id=${chatId}">${name}</a>`;
+        const userLink = chatId ? `<a href="tg://user?id=${chatId}">${name}</a>` : name;
 
         const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendDocument`, {
           chat_id: adminChatId,
           document: fs.createReadStream(`order_${chatId}.pdf`),
-          caption: `Заказ от пользователя ${userLink}\n`,
+          caption: `Заказ от пользователя ${targetURL}\n`,
           parse_mode: 'HTML',
         }, {
           headers: {
@@ -328,11 +371,29 @@ bot.on('callback_query', async (query) => {
 
         console.log('Сообщение отправлено администратору:', response.data);
 
-        bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.')
+        bot.sendMessage(chatId, 'Дякуємо за замовлення. З вами зв\'яжуться найближчим часом.');
       });
     } catch (error) {
       console.error('Помилка при оформленні заказу:', error);
       bot.sendMessage(chatId, 'Помилка при оформленні заказу.');
+    }
+  }
+  else if (data.startsWith('show_more_orders:')) {
+    const start = parseInt(data.split(':')[1]);
+
+    try {
+      const client = await Clients.findOne({ userId: chatId });
+
+      if (client) {
+        const orders = client.orders;
+        const exchangeRate = await getExchangeRate();
+        sendOrderChunk(chatId, orders, start, exchangeRate); // отправляем следующую часть
+      } else {
+        bot.sendMessage(chatId, 'Вибачте, ви не зареєстровані в нашій системі.');
+      }
+    } catch (error) {
+      console.error('Помилка при отриманні замовлень:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при отриманні замовлень.');
     }
   }
 });
@@ -353,25 +414,41 @@ bot.onText(/^(Каталог 🔎)$/i, async (msg) => {
   bot.sendMessage(chatId, 'Оберіть категорію каталогу:', options);
 });
 
+const waitingForMessage = new Map();
 bot.onText(/^(Залишити повідомлення ✍️)$/i, async (msg) => {
   const chatId = msg.chat.id;
+
+  bot.sendMessage(chatId, 'Будь ласка, введіть своє повідомлення:');
+
+  waitingForMessage.set(chatId, true);
+});
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
   const messageText = msg.text;
+  const userLink = `tg://user?id=${chatId}`
 
-  try {
-    const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendMessage`, {
-      chat_id: adminChatId,
-      text: `Сообщение от пользователя ${chatId}:\n${messageText}`,
-    });
+  if (waitingForMessage.get(chatId)) {
+    try {
+      const response = await axios.post(`https://api.telegram.org/bot${adminBotToken}/sendMessage`, {
+        chat_id: adminChatId,
+        text: `Сообщение от пользователя Telegram ${userLink}:\n${messageText}`,
+        parse_mode: 'HTML'
+      });
 
-    console.log('Сообщение отправлено администратору:', response.data);
+      console.log('Повідомлення відправлено адміністратору:', response.data);
 
-    bot.sendMessage(chatId, 'Ваше повідомлення отримано. Дякуємо за обережність!');
-  } catch (error) {
-    console.error('Помилка при обробці повідомлення:', error);
-    bot.sendMessage(chatId, 'Виникла помилка при обробці вашого повідомлення. Спробуйте ще раз пізніше.');
+      bot.sendMessage(chatId, 'Ваше повідомлення відправлено. Дякуємо за обережність!');
+
+      waitingForMessage.delete(chatId);
+    } catch (error) {
+      console.error('Помилка при обробці повідомлення:', error);
+      bot.sendMessage(chatId, 'Виникла помилка при обробці вашого повідомлення. Спробуйте ще раз пізніше.');
+    }
   }
 });
 
+const CHUNK_SIZE = 5;
+const MAX_MESSAGE_LENGTH = 4000;
 bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -383,10 +460,13 @@ bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
 
       if (orders.length > 0) {
         let message = 'Ваші замовлення:\n';
+        const exchangeRate = await getExchangeRate();
+        sendOrderChunk(chatId, orders, 0, exchangeRate); // начинаем с 0
+
         orders.forEach((order, index) => {
           const formattedDate = moment(order.date).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
 
-          message += `${index + 1}. Назва: ${order.name}\nЦіна: ${order.price} грн\nДата: ${formattedDate}\n\n`;
+          message += `${index + 1}. Назва: ${order.name}\nЦіна: ${order.price * exchangeRate} грн\nДата: ${formattedDate}\n\n`;
         });
 
         bot.sendMessage(chatId, message);
@@ -401,6 +481,49 @@ bot.onText(/^(Мої замовлення 📋)$/i, async (msg) => {
     bot.sendMessage(chatId, 'Виникла помилка при отриманні замовлень.');
   }
 });
+
+const sendOrderChunk = (chatId, orders, start, exchangeRate, messageId) => {
+  let message = 'Ваші замовлення:\n';
+  const end = Math.min(start + CHUNK_SIZE, orders.length);
+
+  for (let i = start; i < end; i++) {
+    const order = orders[i];
+    const formattedDate = moment(order.date).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
+    message += `${i + 1}. Назва: ${order.name}\nЦіна: ${(order.price * exchangeRate).toFixed(2)} грн\nДата: ${formattedDate}\n\n`;
+
+    if (message.length >= MAX_MESSAGE_LENGTH) {
+      break;
+    }
+  }
+
+  const options = {
+    reply_markup: {
+      inline_keyboard: []
+    }
+  };
+
+  if (start > 0) {
+    options.reply_markup.inline_keyboard.push([{
+      text: 'Назад',
+      callback_data: `show_previous_orders:${start}`
+    }]);
+  }
+
+  if (end < orders.length) {
+    options.reply_markup.inline_keyboard.push([{
+      text: 'Показати ще',
+      callback_data: `show_more_orders:${end}`
+    }]);
+  }
+
+  if (messageId) {
+    bot.deleteMessage(chatId, messageId).then(() => {
+      bot.sendMessage(chatId, message, options);
+    });
+  } else {
+    bot.sendMessage(chatId, message, options);
+  }
+};
 
 bot.onText(/^(Кошик 🛒)$/i, async (msg) => {
   const chatId = msg.chat.id;
@@ -459,7 +582,7 @@ async function getProductById(productId) {
     throw error;
   }
 }
-//добавление нового клиента в БД и проверка на уже существующего клиента
+//добавление нового заказа клиента в БД
 async function addToDatabase(productId, chatId) {
   try {
     let product = await Security.findById(productId);
@@ -534,7 +657,7 @@ bot.on('contact', async (msg) => {
 
     await newClient.save();
 
-    console.log('Новий клієнт збережений в базі даних:', newClient);
+    console.log('Новый клиент сохранён в БД:', newClient);
 
     bot.sendMessage(chatId, 'Дякуємо, що приєдналися до нас.', {
       reply_markup: {
@@ -552,7 +675,7 @@ bot.on('contact', async (msg) => {
       }
     });
   } catch (error) {
-    console.error('Помилка при збереженні нового клієнта:', error);
+    console.error('Ошибка при сохрнанении нового клиента:', error);
     bot.sendMessage(chatId, 'Виникла помилка при реєстрації. Спробуйте ще раз пізніше.', {
       reply_markup: {
         remove_keyboard: true
@@ -565,7 +688,12 @@ const getExchangeRate = async () => {
   try {
     const response = await axios.get('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
     const usdRate = response.data.find(currency => currency.cc === 'USD');
-    return usdRate.rate;
+
+    const roundTo = (num) => Math.round(num / 5) * 5;
+
+    const roundedUsdRate = roundTo(usdRate.rate);
+
+    return roundedUsdRate;
   } catch (error) {
     console.error('Ошибка при получении курса доллара:', error);
     return null;
