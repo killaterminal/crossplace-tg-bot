@@ -233,7 +233,6 @@ bot.on('callback_query', async (query) => {
   }
   else if (data.startsWith('details_security_object_') && data.endsWith('_details')) {
     const objectId = data.split('_')[3];
-    await bot.sendMessage(chatId, "Object id: " + objectId);
     try {
       const object = await Security.findById(objectId);
       if (object) {
