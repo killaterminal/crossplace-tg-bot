@@ -41,6 +41,7 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
   const name = query.message.chat.first_name;
   const targetURL = `tg://user?id=${chatId}`;
+  const messageId = query.message.message_id;
 
   const addToCart = (chatId, productId, cartType) => {
     if (!cartType[chatId]) {
@@ -76,15 +77,22 @@ bot.on('callback_query', async (query) => {
           if (exchangeRate) {
             const priceInUAH = object.price * exchangeRate;
 
-            const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Опис:* ${object.description}`;
+            const response = `*ID:* \`${object._id}\`\n*Назва:* ${object.name}\n*Категорія:* ${object.category}\n`; // + *Опис:* ${object.description}
             const options = {
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`, callback_data: `security_object_${object._id}` }]
+                  [{
+                    text: `До кошику 🛒 ${priceInUAH.toFixed(0)} грн`,
+                    callback_data: `security_object_${object._id}_add_to_cart`
+                  }],
+                  [{
+                    text: 'Детальніше',
+                    callback_data: `details_security_object_${object._id}_details`
+                  }]
                 ]
               }
             };
-            bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
+            await bot.sendPhoto(chatId, object.image, { caption: response, parse_mode: 'Markdown', reply_markup: options.reply_markup });
           } else {
             console.log('Не удалось получить курс доллара. Невозможно вывести цены в долларах.');
           }
@@ -223,6 +231,28 @@ bot.on('callback_query', async (query) => {
     repairService[chatId].push(productId);
     bot.sendMessage(chatId, 'Товар додано до кошика.');
   }
+  else if (data.startsWith('details_security_object_') && data.endsWith('_details')) {
+    const objectId = data.split('_')[3];
+    await bot.sendMessage(chatId, "Object id: " + objectId);
+    try {
+      const object = await Security.findById(objectId);
+      if (object) {
+        const response = `*Назва:* ${object.name}\n*Категорія:* ${object.category}\n*Опис:* ${object.description}`;
+        await bot.sendMessage(chatId, response, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: 'Закрити', callback_data: 'close_alert' }]
+            ]
+          }
+        });
+      } else {
+        await bot.sendMessage(chatId, 'Не вдалося знайти деталі цього товару. 😔');
+      }
+    } catch (error) {
+      console.error('Помилка отримання деталей товару:', error);
+      await bot.sendMessage(chatId, 'Виникла помилка при отриманні деталей товару. Спробуйте пізніше 😔');
+    }
+  }
   //формирование заказа
   else if (data === 'order') {
     if (!shoppingCarts[chatId] || shoppingCarts[chatId].length === 0) {
@@ -297,8 +327,8 @@ bot.on('callback_query', async (query) => {
 
         pdfDoc.moveTo(45, startYTable + 15).lineTo(500, startYTable + 15).stroke();
 
-        let currentY = startYTable + rowHeight; 
-        let productIndex = 1; 
+        let currentY = startYTable + rowHeight;
+        let productIndex = 1;
 
         for (const productId of shoppingCarts[chatId]) {
           const product = await getProductById(productId);
@@ -312,25 +342,25 @@ bot.on('callback_query', async (query) => {
             pdfDoc.text(product.name, 100, currentY, { width: columnWidths[1], height: rowHeight, align: 'left', continued: false });
             pdfDoc.text(priceInUAH.toFixed(0), 350, currentY, { width: columnWidths[2], align: 'right' });
 
-            currentY += rowHeight; 
+            currentY += rowHeight;
             productIndex++;
           }
         }
 
         pdfDoc.moveTo(45, currentY).lineTo(500, currentY).stroke();
 
-        const totalRowY = currentY; 
-        pdfDoc.rect(45, totalRowY - rowHeight, 455, rowHeight).stroke(); 
+        const totalRowY = currentY;
+        pdfDoc.rect(45, totalRowY - rowHeight, 455, rowHeight).stroke();
 
         // pdfDoc.text('Загальна сума:', 50, totalRowY, { width: columnWidths[0], align: 'center' });
         pdfDoc.text(`Загальна сума: ${totalPrice.toFixed(0)} грн`, 50, totalRowY + 2, { width: 500, align: 'left' });
 
         pdfDoc.moveTo(45, totalRowY + rowHeight).lineTo(500, totalRowY + rowHeight).stroke();
 
-        const infoStartY = totalRowY + rowHeight + 20; 
+        const infoStartY = totalRowY + rowHeight + 20;
 
         const formattedDate = moment(new Date()).locale('ru').format('DD.MM.YYYY, HH:mm:ss');
-        
+
 
         const existingClient = await Clients.findOne({ userId: chatId });
         if (existingClient) {
@@ -395,6 +425,9 @@ bot.on('callback_query', async (query) => {
       console.error('Помилка при отриманні замовлень:', error);
       bot.sendMessage(chatId, 'Виникла помилка при отриманні замовлень.');
     }
+  }
+  else if (data === 'close_alert') {
+    await bot.deleteMessage(chatId, messageId);
   }
 });
 
